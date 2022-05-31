@@ -1,6 +1,6 @@
 extern crate serde;
 extern crate serde_json;
-mod serde_json_any_map;
+mod serde_tuple_iter_map;
 
 use std::collections::HashMap;
 use serde::Serialize;
@@ -21,7 +21,7 @@ fn main() {
     Err(e) => { println!("Error: {}", e); }
   }
 
-  let serialized = serde_json_any_map::to_string(&map);
+  let serialized = serde_tuple_iter_map::to_string(&map);
   match serialized {
     Ok(s) => { println!("{}", s); }
     Err(e) => { println!("Error: {}", e); }
