@@ -1,5 +1,5 @@
 [package]
-name = "ser_any_map"
+name = "serde_json_tuple_iter"
 version = "1.0.0"
 edition = "2021"
 
