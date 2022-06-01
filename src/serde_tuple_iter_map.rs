@@ -17,7 +17,8 @@ impl<'a, K, V> Serialize for SerializeAnyIterWrapper<'a, K, V> where
     S: Serializer
   {
     let mut ser_map = serializer.serialize_map(None)?;
-    while let Some((k, v)) = self.iter.borrow_mut().next() {
+    let mut iter = self.iter.borrow_mut();
+    while let Some((k, v)) = iter.next() {
       ser_map.serialize_entry(match &serde_json::to_string(&k)
       {
         Ok(key_string) => key_string,
