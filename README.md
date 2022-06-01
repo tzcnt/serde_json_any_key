@@ -40,7 +40,8 @@ fn main() {
 
   
 
-  // Utility function also exists for vec of tuples, and produces the same output
+  // Utility function also exists for vec of tuples
+  // Same output
   let v = vec![(Test {a: 3, b: 5}, Test {a: 7, b: 9})];
   let serialized = serde_json_tuple_iter::vec_to_json(&mut v.iter());
   match serialized {
@@ -53,6 +54,7 @@ fn main() {
 Output:
 ```
 Error: key must be a string
+{"{\"a\":3,\"b\":5}":{"a":7,"b":9}}
 {"{\"a\":3,\"b\":5}":{"a":7,"b":9}}
 {"{\"a\":3,\"b\":5}":{"a":7,"b":9}}
 ```
