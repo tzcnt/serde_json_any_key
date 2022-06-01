@@ -2,6 +2,12 @@
 name = "serde_json_tuple_iter"
 version = "1.0.0"
 edition = "2021"
+license = "Unlicense"
+repository = "https://github.com/tzcnt/serde_json_tuple_iter/"
+description = "Serialize a 2-tuple iter (as from HashMap) into a JSON map with serde_json, even if the key is a struct type."
+keywords = ["serde_json", "hashmap", "iterator", "struct", "key"]
+categories = ["encoding"]
+exclude = ["main.rs"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
