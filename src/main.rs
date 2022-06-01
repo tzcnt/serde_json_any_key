@@ -20,8 +20,8 @@ fn main() {
     Ok(s) => { println!("{}", s); }
     Err(e) => { println!("Error: {}", e); }
   }
-
-  let serialized = serde_tuple_iter_map::to_string(&map);
+  
+  let serialized = serde_tuple_iter_map::to_string(&mut map.iter());
   match serialized {
     Ok(s) => { println!("{}", s); }
     Err(e) => { println!("Error: {}", e); }
