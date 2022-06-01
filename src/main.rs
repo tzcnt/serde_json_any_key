@@ -1,7 +1,3 @@
-extern crate serde;
-extern crate serde_json;
-mod serde_json_tuple_iter;
-
 use std::collections::HashMap;
 use serde::Serialize;
 

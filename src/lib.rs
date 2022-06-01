@@ -3,7 +3,6 @@ extern crate serde_json;
 
 use serde::ser::{Serialize, Serializer, SerializeMap, Error};
 use std::cell::RefCell;
-
 pub struct SerializeMapIterWrapper<'a, K, V>
 {
   pub iter: RefCell<&'a mut (dyn Iterator<Item=(&'a K, &'a V)> + 'a)>
