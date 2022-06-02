@@ -30,7 +30,7 @@ impl<'a, K, V> Serialize for SerializeMapIterWrapper<'a, K, V> where
   }
 }
 
-/// Serialize an Iterator<(&K, &V)> like that given by HashMap::iter().
+/// Serialize an Iterator<(&K, &V)> like that given by HashMap<K,V>::iter().
 /// serde_json::to_string() will be called on each K element during serialization.
 ///
 /// # Examples
@@ -58,7 +58,7 @@ impl<'a, K, V> Serialize for SerializeMapIterWrapper<'a, K, V> where
 /// // Outputs {"{\"a\":3,\"b\":5}":{"a":7,"b":9}}
 /// let ser2 = map_iter_to_json(&mut map.iter()).unwrap();
 ///
-/// // Compare to a winded workaround that copies the map.
+/// // Compare to a long-winded workaround that copies the map.
 /// // Same output
 /// let string_map: HashMap<String, Test> = map.iter().map(|(k, &v)| (serde_json::to_string(k).unwrap(), v)).collect();
 /// let ser3 = serde_json::to_string(&string_map).unwrap();
@@ -175,7 +175,7 @@ impl<'a, K, V> Serialize for SerializeVecIterWrapper<'a, K, V> where
   }
 }
 
-/// Serialize an Iterator<&(K, V)> like that given by Vec::<(K, V)>::iter().
+/// Serialize an Iterator<&(K, V)> like that given by Vec<(K, V)>::iter().
 /// serde_json::to_string() will be called on each K element during serialization.
 /// This will produce a JSON Map structure, as if called on a HashMap<K, V>.
 ///
@@ -192,16 +192,16 @@ impl<'a, K, V> Serialize for SerializeVecIterWrapper<'a, K, V> where
 /// }
 /// 
 /// fn try_main() -> Result<(), Error> {
-/// let v = vec![(Test {a: 3, b: 5}, Test {a: 7, b: 9})];
+/// let vec: Vec<(Test,Test)> = vec![(Test {a: 3, b: 5}, Test {a: 7, b: 9})];
 /// 
 /// // Naive serde_json will serialize this as an array, not a map.
 /// // Outputs [[{"a":3,"b":5},{"a":7,"b":9}]]
-/// let ser1 = serde_json::to_string(&v).unwrap();
+/// let ser1 = serde_json::to_string(&vec).unwrap();
 /// assert_eq!(ser1, "[[{\"a\":3,\"b\":5},{\"a\":7,\"b\":9}]]");
 /// 
 /// // Use this crate's utility function - elements are serialized lazily.
 /// // Outputs {"{\"a\":3,\"b\":5}":{"a":7,"b":9}}
-/// let ser2 = vec_iter_to_json(&mut v.iter()).unwrap();
+/// let ser2 = vec_iter_to_json(&mut vec.iter()).unwrap();
 ///
 /// assert_eq!(ser2, "{\"{\\\"a\\\":3,\\\"b\\\":5}\":{\"a\":7,\"b\":9}}");
 /// Ok(()) }
@@ -231,10 +231,10 @@ V: Serialize
 /// }
 /// 
 /// fn try_main() -> Result<(), Error> {
-/// let v = vec![(Test {a: 3, b: 5}, Test {a: 7, b: 9})];
+/// let vec: Vec<(Test,Test)> = vec![(Test {a: 3, b: 5}, Test {a: 7, b: 9})];
 /// 
-/// let ser1 = vec_to_json(&v).unwrap();
-/// let ser2 = vec_iter_to_json(&mut v.iter()).unwrap();
+/// let ser1 = vec_to_json(&vec).unwrap();
+/// let ser2 = vec_iter_to_json(&mut vec.iter()).unwrap();
 ///
 /// assert_eq!(ser1, ser2);
 /// Ok(()) }
@@ -262,7 +262,7 @@ V: Serialize
 /// }
 /// 
 /// fn try_main() -> Result<(), Error> {
-/// let vec = vec![(Test {a: 3, b: 5}, Test {a: 7, b: 9})];
+/// let vec: Vec<(Test,Test)> = vec![(Test {a: 3, b: 5}, Test {a: 7, b: 9})];
 /// 
 /// let ser = vec_to_json(&vec).unwrap();
 /// let deser = json_to_vec(&ser).unwrap();
