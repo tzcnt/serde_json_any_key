@@ -7,15 +7,15 @@
     {
       "type": "lldb",
       "request": "launch",
-      "name": "Debug executable 'ser_any_map'",
+      "name": "Debug executable 'serde_json_struct_key'",
       "cargo": {
         "args": [
           "build",
-          "--bin=ser_any_map",
-          "--package=ser_any_map"
+          "--bin=serde_json_struct_key",
+          "--package=serde_json_struct_key"
         ],
         "filter": {
-          "name": "ser_any_map",
+          "name": "serde_json_struct_key",
           "kind": "bin"
         }
       },
@@ -25,16 +25,16 @@
     {
       "type": "lldb",
       "request": "launch",
-      "name": "Debug unit tests in executable 'ser_any_map'",
+      "name": "Debug unit tests in executable 'serde_json_struct_key'",
       "cargo": {
         "args": [
           "test",
           "--no-run",
-          "--bin=ser_any_map",
-          "--package=ser_any_map"
+          "--bin=serde_json_struct_key",
+          "--package=serde_json_struct_key"
         ],
         "filter": {
-          "name": "ser_any_map",
+          "name": "serde_json_struct_key",
           "kind": "bin"
         }
       },
