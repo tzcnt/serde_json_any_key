@@ -1,10 +1,12 @@
-# serde_json_any_key
+## serde_json_any_key
 Workaround for \"key must be a string\" error with serde_json. Serialize any HashMap<K,V>, Vec<K,V>, Iter<(&K,&V)>, or Iter<&(K,V)> as a JSON map.
 The output will be the same as if you manually serialized the struct key to a string.
 
 Also supports deserialization to HashMap<K,V> or Vec<(K,V)>.
 
-```
+## Example
+
+```rust
 use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
 use serde_json_any_key::*;
