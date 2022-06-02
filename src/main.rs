@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
-use serde_json_struct_key::*;
+use serde_json_any_key::*;
 
 #[derive(Clone, Copy, Deserialize, Serialize, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
 pub struct Test {
@@ -12,11 +12,11 @@ fn main() {
   let mut map = HashMap::<Test, Test>::new();
   map.insert(Test {a: 3, b: 5}, Test {a: 7, b: 9});
 
-  // Fails with Error: key must be a string
+  // Fails with error: key must be a string
   let serialized = serde_json::to_string(&map);
   match serialized {
     Ok(s) => { println!("{}", s); }
-    Err(e) => { println!("Error: {}", e); }
+    Err(e) => { println!("Error as expected: {}", e); }
   }
 
   // Long winded workaround that duplicates the map entirely
@@ -47,9 +47,9 @@ fn main() {
   assert_eq!(serialized, canonical_serialization);
 
   // Also supports deserialization, back to HashMap or Vec
-  let deserialized_map: HashMap<Test,Test> = serde_json_struct_key::json_to_map(&serialized).unwrap();
+  let deserialized_map: HashMap<Test,Test> = serde_json_any_key::json_to_map(&serialized).unwrap();
   assert_eq!(map, deserialized_map);
-  let deserialized_vec: Vec<(Test,Test)> = serde_json_struct_key::json_to_vec(&serialized).unwrap();
+  let deserialized_vec: Vec<(Test,Test)> = serde_json_any_key::json_to_vec(&serialized).unwrap();
   assert_eq!(vec, deserialized_vec);
 
 }
