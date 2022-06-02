@@ -1,7 +1,11 @@
 extern crate serde;
 extern crate serde_json;
 
+use core::marker::PhantomData;
+use std::hash::Hash;
+use serde_json::{Map, Value};
 use serde::ser::{Serialize, Serializer, SerializeMap, Error};
+use serde::de::{Deserialize, DeserializeOwned};
 use std::cell::RefCell;
 struct SerializeMapIterWrapper<'a, K, V>
 {
@@ -71,6 +75,75 @@ V: Serialize
   serde_json::to_string(&SerializeMapIterWrapper {
     iter: RefCell::new(iter)
   })
+}
+
+pub struct DeserializeMapIter<'a, K, V> where
+K: Deserialize<'a>,
+V: Deserialize<'a>
+{
+  str: &'a str,
+  iter: serde_json::map::Iter<'a>,
+  keyType: PhantomData<K>,
+  valType: PhantomData<V>
+}
+
+// impl<'a, K, V> DeserializeMapIter<'a, K, V> {
+//   pub fn new(json: serde_json::Value) -> DeserializeMapIter<'a, K, V> {
+//     DeserializeMapIter<'a, K, V> {
+//       json: 
+//     }
+//   }
+// }
+
+impl<'a, K, V> Iterator for DeserializeMapIter<'a, K, V> where
+K: Deserialize<'a>,
+V: Deserialize<'a>
+{
+  type Item = (K, V);
+  fn next(&mut self) -> Option<Self::Item> {
+    if let Some(next) = self.iter.next() {
+      let keyObj: K = serde_json::from_str(next.0).unwrap();
+      let valObj: V = <V as Deserialize>::deserialize(next.1).unwrap();
+      Some((keyObj, valObj))
+    } else {
+      return None;
+    }
+  }
+}
+fn jsonItemKVMapFunc<K, V>(kv: (&String, &serde_json::Value)) -> Option<(K,V)> where
+K: DeserializeOwned,
+V: DeserializeOwned
+{
+  let keyObj: K = serde_json::from_str(kv.0).unwrap();
+  let valObj: V = <V as Deserialize>::deserialize(kv.1).unwrap();
+  Some((keyObj, valObj))
+}
+
+//pub fn json_to_map<'a, K, V>(str: &'a str) -> Result<DeserializeMapIter<'a, K, V>, serde_json::Error> where
+//std::iter::Map<serde_json::map::Iter<'_>, fn((&std::string::String, &Value)) -> std::option::Option<(K, V)>>
+pub fn json_to_map<'a, K, V>(str: &'a str) -> std::collections::HashMap<K, V> where
+//pub fn json_to_map<'a, K, V>(str: &'a str) -> std::iter::Map<serde_json::map::Iter<'_>, fn((&std::string::String, &Value)) -> Option<(K, V)>> where
+for<'de> K: Deserialize<'de> + std::cmp::Eq + Hash,
+for<'de> V: Deserialize<'de>
+{
+  //serde_json::Value::from(str).as_object().unwrap().into_iter().map(jsonItemKVMapFunc)
+
+  // let map: std::collections::HashMap<K, V> = serde_json::Value::from(str).as_object().unwrap().into_iter().map(|(k, v)| {
+  //   let keyObj: K = serde_json::from_str(k).unwrap();
+  //   let valObj: V = <V as Deserialize>::deserialize(v).unwrap();
+  //   Some((keyObj, valObj))
+  // }).collect();
+  //Ok(x)
+  //let contents_json: serde_json::Value = serde_json::Value::from(str)?;
+  let mut map: std::collections::HashMap<K, V> = std::collections::HashMap::new();
+  let v = serde_json::Value::from(str);
+  let o = v.as_object().unwrap();
+  for (key, val) in o.iter() {
+    let key_obj: K = serde_json::from_str(key).unwrap();
+    let val_obj: V = <V as Deserialize>::deserialize(val).unwrap();
+    map.insert(key_obj, val_obj);
+  }
+  map
 }
 
 struct SerializeVecIterWrapper<'a, K, V>
