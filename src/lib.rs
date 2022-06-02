@@ -285,3 +285,197 @@ for<'de> V: Deserialize<'de>
   }
   Ok(vec)
 }
+
+
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use std::collections::HashMap;
+  use serde::{Serialize, Deserialize};
+
+  #[derive(Clone, Copy, Deserialize, Serialize, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
+  pub struct Test {
+    pub a: i32,
+    pub b: i32
+  }
+
+  #[test]
+  fn test_struct_roundtrip_map() {
+    let mut data = HashMap::<Test, Test>::new();
+    data.insert(Test {a: 3, b: 5}, Test {a: 7, b: 9});
+    data.insert(Test {a: 11, b: 12}, Test {a: 13, b: 14});
+    let serialized = map_to_json(&data).unwrap();
+    let deser: HashMap<Test, Test> = json_to_map(&serialized).unwrap();
+
+    assert_eq!(data, deser);
+  }
+
+  #[test]
+  fn test_struct_roundtrip_map_iter() {
+    let mut data = HashMap::<Test, Test>::new();
+    data.insert(Test {a: 3, b: 5}, Test {a: 7, b: 9});
+    data.insert(Test {a: 11, b: 12}, Test {a: 13, b: 14});
+    let serialized = map_iter_to_json(&mut data.iter()).unwrap();
+    let deser: HashMap<Test, Test> = json_to_map(&serialized).unwrap();
+
+    assert_eq!(data, deser);
+  }
+
+  #[test]
+  fn test_struct_roundtrip_vec() {
+    let mut data = Vec::<(Test, Test)>::new();
+    data.push((Test {a: 3, b: 5}, Test {a: 7, b: 9}));
+    data.push((Test {a: 11, b: 12}, Test {a: 13, b: 14}));
+    let serialized = vec_to_json(&data).unwrap();
+    let mut deser: Vec<(Test, Test)> = json_to_vec(&serialized).unwrap();
+    deser.sort();
+
+    assert_eq!(data, deser);
+  }
+
+  #[test]
+  fn test_struct_roundtrip_vec_iter() {
+    let mut data = Vec::<(Test, Test)>::new();
+    data.push((Test {a: 3, b: 5}, Test {a: 7, b: 9}));
+    data.push((Test {a: 11, b: 12}, Test {a: 13, b: 14}));
+    let serialized = vec_iter_to_json(&mut data.iter()).unwrap();
+    let mut deser: Vec<(Test, Test)> = json_to_vec(&serialized).unwrap();
+    deser.sort();
+
+    assert_eq!(data, deser);
+  }
+
+  #[test]
+  fn test_struct_canonical_serialization() {
+    let mut map = HashMap::<Test, Test>::new();
+    map.insert(Test {a: 3, b: 5}, Test {a: 7, b: 9});
+    let string_map: HashMap<String, Test> = map.iter().map(|(k, &v)| (serde_json::to_string(k).unwrap(), v)).collect();
+    let canonical_serialization = serde_json::to_string(&string_map).unwrap();
+    
+    let serialized = map_to_json(&map).unwrap();
+    assert_eq!(serialized, canonical_serialization);
+
+    let vec = vec![(Test {a: 3, b: 5}, Test {a: 7, b: 9})];
+    let serialized = vec_to_json(&vec).unwrap();
+    assert_eq!(serialized, canonical_serialization);
+
+    let mut btree = std::collections::BTreeMap::<Test, Test>::new();
+    btree.insert(Test {a: 3, b: 5}, Test {a: 7, b: 9});
+    let serialized = map_iter_to_json(&mut btree.iter()).unwrap();
+    assert_eq!(serialized, canonical_serialization);
+  }
+
+  #[test]
+  fn test_string_roundtrip_map() {
+    let mut data = HashMap::<String, i32>::new();
+    data.insert("bar".to_string(), 7);
+    data.insert("foo".to_string(), 5);
+    let serialized = map_to_json(&data).unwrap();
+    let deser: HashMap<String, i32> = json_to_map(&serialized).unwrap();
+
+    assert_eq!(data, deser);
+  }
+
+  #[test]
+  fn test_string_roundtrip_map_iter() {
+    let mut data = HashMap::<String, i32>::new();
+    data.insert("bar".to_string(), 7);
+    data.insert("foo".to_string(), 5);
+    let serialized = map_iter_to_json(&mut data.iter()).unwrap();
+    let deser: HashMap<String, i32> = json_to_map(&serialized).unwrap();
+
+    assert_eq!(data, deser);
+  }
+
+  #[test]
+  fn test_string_roundtrip_vec() {
+    let mut data = Vec::<(String, i32)>::new();
+    data.push(("bar".to_string(), 7));
+    data.push(("foo".to_string(), 5));
+    let serialized = vec_to_json(&data).unwrap();
+    let mut deser: Vec<(String, i32)> = json_to_vec(&serialized).unwrap();
+    deser.sort();
+
+    assert_eq!(data, deser);
+  }
+
+  #[test]
+  fn test_string_roundtrip_vec_iter() {
+    let mut data = Vec::<(String, i32)>::new();
+    data.push(("bar".to_string(), 7));
+    data.push(("foo".to_string(), 5));
+    let serialized = vec_iter_to_json(&mut data.iter()).unwrap();
+    let mut deser: Vec<(String, i32)> = json_to_vec(&serialized).unwrap();
+    deser.sort();
+
+    assert_eq!(data, deser);
+  }
+
+  #[test]
+  fn test_string_canonical_serialization() {
+    let mut map = HashMap::<String, i32>::new();
+    map.insert("foo".to_string(), 5);
+    let canonical_serialization = serde_json::to_string(&map).unwrap();
+    
+    let serialized = map_to_json(&map).unwrap();
+    assert_eq!(serialized, canonical_serialization);
+
+    let vec = vec![("foo".to_string(), 5)];
+    let serialized = vec_to_json(&vec).unwrap();
+    assert_eq!(serialized, canonical_serialization);
+
+    let mut btree = std::collections::BTreeMap::<String, i32>::new();
+    btree.insert("foo".to_string(), 5);
+    let serialized = map_iter_to_json(&mut btree.iter()).unwrap();
+    assert_eq!(serialized, canonical_serialization);
+  }
+
+
+  #[test]
+  fn test_int_roundtrip_map() {
+    let mut data = HashMap::<i32, Test>::new();
+    data.insert(5, Test {a: 6, b: 7});
+    data.insert(6, Test {a: 9, b: 11});
+    let serialized = map_to_json(&data).unwrap();
+    let deser: HashMap<i32, Test> = json_to_map(&serialized).unwrap();
+
+    assert_eq!(data, deser);
+  }
+
+  #[test]
+  fn test_int_roundtrip_map_iter() {
+    let mut data = HashMap::<i32, Test>::new();
+    data.insert(5, Test {a: 6, b: 7});
+    data.insert(6, Test {a: 9, b: 11});
+    let serialized = map_iter_to_json(&mut data.iter()).unwrap();
+    let deser: HashMap<i32, Test> = json_to_map(&serialized).unwrap();
+
+    assert_eq!(data, deser);
+  }
+
+  #[test]
+  fn test_int_roundtrip_vec() {
+    let mut data = Vec::<(i32, Test)>::new();
+    data.push((5, Test {a: 6, b: 7}));
+    data.push((6, Test {a: 9, b: 11}));
+    let serialized = vec_to_json(&data).unwrap();
+    let mut deser: Vec<(i32, Test)> = json_to_vec(&serialized).unwrap();
+    deser.sort();
+
+    assert_eq!(data, deser);
+  }
+
+  #[test]
+  fn test_int_roundtrip_vec_iter() {
+    let mut data = Vec::<(i32, Test)>::new();
+    data.push((5, Test {a: 6, b: 7}));
+    data.push((6, Test {a: 9, b: 11}));
+    let serialized = vec_iter_to_json(&mut data.iter()).unwrap();
+    let mut deser: Vec<(i32, Test)> = json_to_vec(&serialized).unwrap();
+    deser.sort();
+
+    assert_eq!(data, deser);
+  }
+
+}
