@@ -1,6 +1,7 @@
 extern crate serde;
 extern crate serde_json;
 
+use std::any::{Any, TypeId};
 use std::hash::Hash;
 use serde::ser::{Serialize, Serializer, SerializeMap, Error};
 use serde::de::{Deserialize};
@@ -11,7 +12,7 @@ struct SerializeMapIterWrapper<'a, K, V>
 }
 
 impl<'a, K, V> Serialize for SerializeMapIterWrapper<'a, K, V> where
-  K: Serialize,
+  K: Serialize + Any,
   V: Serialize
 {
   fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where
@@ -19,12 +20,20 @@ impl<'a, K, V> Serialize for SerializeMapIterWrapper<'a, K, V> where
   {
     let mut ser_map = serializer.serialize_map(None)?;
     let mut iter = self.iter.borrow_mut();
-    while let Some((k, v)) = iter.next() {
-      ser_map.serialize_entry(match &serde_json::to_string(&k)
-      {
-        Ok(key_string) => key_string,
-        Err(e) => { return Err(e).map_err(S::Error::custom); }
-      }, &v)?;
+    // handle strings specially so they don't get escaped and wrapped inside another string
+    if TypeId::of::<K>() == TypeId::of::<String>() {
+      while let Some((k, v)) = iter.next() {
+        let s = (k as &dyn Any).downcast_ref::<String>().ok_or(S::Error::custom("Failed to serialize String as string"))?;
+        ser_map.serialize_entry(s, &v)?;
+      }
+    } else {
+      while let Some((k, v)) = iter.next() {
+        ser_map.serialize_entry(match &serde_json::to_string(&k)
+        {
+          Ok(key_string) => key_string,
+          Err(e) => { return Err(e).map_err(S::Error::custom); }
+        }, &v)?;
+      }
     }
     ser_map.end()
   }
@@ -68,7 +77,7 @@ impl<'a, K, V> Serialize for SerializeMapIterWrapper<'a, K, V> where
 /// try_main().unwrap();
 /// ```
 pub fn map_iter_to_json<'a, K, V>(iter: &'a mut dyn Iterator<Item=(&'a K, &'a V)>) -> Result<String, serde_json::Error> where
-K: Serialize,
+K: Serialize + Any,
 V: Serialize
 {
   serde_json::to_string(&SerializeMapIterWrapper {
@@ -103,7 +112,7 @@ V: Serialize
 /// try_main().unwrap();
 /// ```
 pub fn map_to_json<'a, K, V>(map: &std::collections::HashMap<K, V>) -> Result<String, serde_json::Error> where
-K: Serialize,
+K: Serialize + Any,
 V: Serialize
 {
   map_iter_to_json(&mut map.iter())
@@ -136,16 +145,25 @@ V: Serialize
 /// try_main().unwrap();
 /// ```
 pub fn json_to_map<'a, K, V>(str: &'a str) -> Result<std::collections::HashMap<K, V>, serde_json::Error> where
-for<'de> K: Deserialize<'de> + std::cmp::Eq + Hash,
+for<'de> K: Deserialize<'de> + std::cmp::Eq + Hash + Any,
 for<'de> V: Deserialize<'de>
 {
   let mut map: std::collections::HashMap<K, V> = std::collections::HashMap::new();
   let v: serde_json::Value = serde_json::from_str(&str)?;
   let o = v.as_object().ok_or(serde_json::Error::custom("Value is not a map"))?;
-  for (key, val) in o.iter() {
-    let key_obj: K = serde_json::from_str(key)?;
-    let val_obj: V = <V as Deserialize>::deserialize(val)?;
-    map.insert(key_obj, val_obj);
+  // handle strings specially as they are not objects
+  if TypeId::of::<K>() == TypeId::of::<String>() {
+    for (key, val) in o.iter() {
+      let key_obj: K = <K as Deserialize>::deserialize(serde_json::Value::from(key.as_str()))?;
+      let val_obj: V = <V as Deserialize>::deserialize(val)?;
+      map.insert(key_obj, val_obj);
+    }
+  } else {
+    for (key, val) in o.iter() {
+      let key_obj: K = serde_json::from_str(key)?;
+      let val_obj: V = <V as Deserialize>::deserialize(val)?;
+      map.insert(key_obj, val_obj);
+    }
   }
   Ok(map)
 }
@@ -156,7 +174,7 @@ struct SerializeVecIterWrapper<'a, K, V>
 }
 
 impl<'a, K, V> Serialize for SerializeVecIterWrapper<'a, K, V> where
-  K: Serialize,
+  K: Serialize + Any,
   V: Serialize
 {
   fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where
@@ -164,12 +182,20 @@ impl<'a, K, V> Serialize for SerializeVecIterWrapper<'a, K, V> where
   {
     let mut ser_map = serializer.serialize_map(None)?;
     let mut iter = self.iter.borrow_mut();
-    while let Some((k, v)) = iter.next() {
-      ser_map.serialize_entry(match &serde_json::to_string(&k)
-      {
-        Ok(key_string) => key_string,
-        Err(e) => { return Err(e).map_err(S::Error::custom); }
-      }, &v)?;
+    // handle strings specially so they don't get escaped and wrapped inside another string
+    if TypeId::of::<K>() == TypeId::of::<String>() {
+      while let Some((k, v)) = iter.next() {
+        let s = (k as &dyn Any).downcast_ref::<String>().ok_or(S::Error::custom("Failed to serialize String as string"))?;
+        ser_map.serialize_entry(s, &v)?;
+      }
+    } else {
+      while let Some((k, v)) = iter.next() {
+        ser_map.serialize_entry(match &serde_json::to_string(&k)
+        {
+          Ok(key_string) => key_string,
+          Err(e) => { return Err(e).map_err(S::Error::custom); }
+        }, &v)?;
+      }
     }
     ser_map.end()
   }
@@ -208,7 +234,7 @@ impl<'a, K, V> Serialize for SerializeVecIterWrapper<'a, K, V> where
 /// try_main().unwrap();
 /// ```
 pub fn vec_iter_to_json<'a, K, V>(iter: &'a mut dyn Iterator<Item=&'a (K, V)>) -> Result<String, serde_json::Error> where
-K: Serialize,
+K: Serialize + Any,
 V: Serialize
 {
   serde_json::to_string(&SerializeVecIterWrapper {
@@ -241,7 +267,7 @@ V: Serialize
 /// try_main().unwrap();
 /// ```
 pub fn vec_to_json<'a, K, V>(vec: &Vec<(K,V)>) -> Result<String, serde_json::Error> where
-K: Serialize,
+K: Serialize + Any,
 V: Serialize
 {
   vec_iter_to_json(&mut vec.iter())
@@ -272,16 +298,25 @@ V: Serialize
 /// try_main().unwrap();
 /// ```
 pub fn json_to_vec<'a, K, V>(str: &'a str) -> Result<Vec<(K, V)>, serde_json::Error> where
-for<'de> K: Deserialize<'de>,
+for<'de> K: Deserialize<'de> + Any,
 for<'de> V: Deserialize<'de>
 {
   let mut vec: Vec<(K, V)> = vec![];
   let v: serde_json::Value = serde_json::from_str(&str)?;
   let o = v.as_object().ok_or(serde_json::Error::custom("Value is not a map"))?;
-  for (key, val) in o.iter() {
-    let key_obj: K = serde_json::from_str(key)?;
-    let val_obj: V = <V as Deserialize>::deserialize(val)?;
-    vec.push((key_obj, val_obj));
+  // handle strings specially as they are not objects
+  if TypeId::of::<K>() == TypeId::of::<String>() {
+    for (key, val) in o.iter() {
+      let key_obj: K = <K as Deserialize>::deserialize(serde_json::Value::from(key.as_str()))?;
+      let val_obj: V = <V as Deserialize>::deserialize(val)?;
+      vec.push((key_obj, val_obj));
+    }
+  } else {
+    for (key, val) in o.iter() {
+      let key_obj: K = serde_json::from_str(key)?;
+      let val_obj: V = <V as Deserialize>::deserialize(val)?;
+      vec.push((key_obj, val_obj));
+    }
   }
   Ok(vec)
 }
@@ -412,25 +447,24 @@ mod tests {
     assert_eq!(data, deser);
   }
 
-  // this test does NOT pass - the String key is quoted and escaped inside the string
-  // #[test]
-  // fn test_string_canonical_serialization() {
-  //   let mut map = HashMap::<String, i32>::new();
-  //   map.insert("foo".to_string(), 5);
-  //   let canonical_serialization = serde_json::to_string(&map).unwrap();
+  #[test]
+  fn test_string_canonical_serialization() {
+    let mut map = HashMap::<String, i32>::new();
+    map.insert("foo".to_string(), 5);
+    let canonical_serialization = serde_json::to_string(&map).unwrap();
     
-  //   let serialized = map_to_json(&map).unwrap();
-  //   assert_eq!(serialized, canonical_serialization);
+    let serialized = map_to_json(&map).unwrap();
+    assert_eq!(serialized, canonical_serialization);
 
-  //   let vec = vec![("foo".to_string(), 5)];
-  //   let serialized = vec_to_json(&vec).unwrap();
-  //   assert_eq!(serialized, canonical_serialization);
+    let vec = vec![("foo".to_string(), 5)];
+    let serialized = vec_to_json(&vec).unwrap();
+    assert_eq!(serialized, canonical_serialization);
 
-  //   let mut btree = std::collections::BTreeMap::<String, i32>::new();
-  //   btree.insert("foo".to_string(), 5);
-  //   let serialized = map_iter_to_json(&mut btree.iter()).unwrap();
-  //   assert_eq!(serialized, canonical_serialization);
-  // }
+    let mut btree = std::collections::BTreeMap::<String, i32>::new();
+    btree.insert("foo".to_string(), 5);
+    let serialized = map_iter_to_json(&mut btree.iter()).unwrap();
+    assert_eq!(serialized, canonical_serialization);
+  }
 
 
   #[test]

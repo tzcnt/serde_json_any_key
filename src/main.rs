@@ -52,4 +52,14 @@ fn main() {
   let deserialized_vec: Vec<(Test,Test)> = serde_json_any_key::json_to_vec(&serialized).unwrap();
   assert_eq!(vec, deserialized_vec);
 
+  // If K actually is a String, it will behave identically to serde_json.
+  let mut string_map: HashMap<String, i32> = HashMap::new();
+  string_map.insert("foo".to_owned(), 1234i32);
+  let ser1 = serde_json::to_string(&string_map).unwrap();
+  let ser2 = serde_json_any_key::map_to_json(&string_map).unwrap();
+  println!("{}", ser2);
+  assert_eq!(ser1, ser2);
+  let deser1: HashMap<String, i32> = serde_json::from_str(&ser1).unwrap();
+  let deser2: HashMap<String, i32> = serde_json_any_key::json_to_map(&ser1).unwrap();
+  assert_eq!(deser1, deser2);
 }
