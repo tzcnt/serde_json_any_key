@@ -30,12 +30,12 @@ V: 'a + Serialize,
 <Self as IntoIterator>::IntoIter: 'a
 { }
 
-struct SerializeMapIterWrapper<'i, 'e, K, V>
+struct SerializeMapIterWrapper<'i,'e,K,V>
 {
-  pub iter: RefCell<&'i mut (dyn Iterator<Item=(&'e K, &'e V)>)>
+  pub iter: RefCell<&'i mut (dyn Iterator<Item=(&'e K,&'e V)>)>
 }
 
-impl<'i, 'e, K, V> Serialize for SerializeMapIterWrapper<'i, 'e, K, V> where
+impl<'i,'e,K,V> Serialize for SerializeMapIterWrapper<'i,'e,K,V> where
   K: Serialize + Any,
   V: Serialize
 {
@@ -100,7 +100,7 @@ impl<'i, 'e, K, V> Serialize for SerializeMapIterWrapper<'i, 'e, K, V> where
 /// Ok(()) }
 /// try_main().unwrap();
 /// ```
-pub fn map_iter_to_json<'i, 'e, K, V>(iter: &'i mut dyn Iterator<Item=(&'e K, &'e V)>) -> Result<String, serde_json::Error> where
+pub fn map_iter_to_json<'i,'e,K,V>(iter: &'i mut dyn Iterator<Item=(&'e K,&'e V)>) -> Result<String, serde_json::Error> where
 K: Serialize + Any,
 V: Serialize
 {
@@ -135,7 +135,7 @@ V: Serialize
 /// Ok(()) }
 /// try_main().unwrap();
 /// ```
-pub fn map_to_json<K, V>(map: &std::collections::HashMap<K, V>) -> Result<String, serde_json::Error> where
+pub fn map_to_json<K,V>(map: &std::collections::HashMap<K,V>) -> Result<String, serde_json::Error> where
 K: Serialize + Any,
 V: Serialize
 {
@@ -168,11 +168,11 @@ V: Serialize
 /// Ok(()) }
 /// try_main().unwrap();
 /// ```
-pub fn json_to_map<'a, K, V>(str: &'a str) -> Result<std::collections::HashMap<K, V>, serde_json::Error> where
+pub fn json_to_map<'a,K,V>(str: &'a str) -> Result<std::collections::HashMap<K,V>, serde_json::Error> where
 for<'de> K: Deserialize<'de> + std::cmp::Eq + Hash + Any,
 for<'de> V: Deserialize<'de>
 {
-  let mut map: std::collections::HashMap<K, V> = std::collections::HashMap::new();
+  let mut map: std::collections::HashMap<K,V> = std::collections::HashMap::new();
   let v: serde_json::Value = serde_json::from_str(&str)?;
   let o = v.as_object().ok_or(serde_json::Error::custom("Value is not a map"))?;
   // handle strings specially as they are not objects
@@ -192,7 +192,7 @@ for<'de> V: Deserialize<'de>
   Ok(map)
 }
 
-pub trait IntoVecIterSerializer<'a,K,V>: IntoIterator<Item=&'a (K, V)> where
+pub trait IntoVecIterSerializer<'a,K,V>: IntoIterator<Item=&'a (K,V)> where
 Self: Sized,
 K: 'a + Serialize + Any,
 V: 'a + Serialize,
@@ -213,12 +213,12 @@ V: 'a + Serialize,
 <Self as IntoIterator>::IntoIter: 'a
 { }
 
-struct SerializeVecIterWrapper<'i, 'e, K, V>
+struct SerializeVecIterWrapper<'i,'e,K,V>
 {
-  pub iter: RefCell<&'i mut dyn Iterator<Item=&'e (K, V)>>
+  pub iter: RefCell<&'i mut dyn Iterator<Item=&'e (K,V)>>
 }
 
-impl<'i, 'e, K, V> Serialize for SerializeVecIterWrapper<'i, 'e, K, V> where
+impl<'i,'e,K,V> Serialize for SerializeVecIterWrapper<'i,'e,K,V> where
   K: Serialize + Any,
   V: Serialize
 {
@@ -278,7 +278,7 @@ impl<'i, 'e, K, V> Serialize for SerializeVecIterWrapper<'i, 'e, K, V> where
 /// Ok(()) }
 /// try_main().unwrap();
 /// ```
-pub fn vec_iter_to_json<'i, 'e, K, V>(iter: &'i mut dyn Iterator<Item=&'e (K, V)>) -> Result<String, serde_json::Error> where
+pub fn vec_iter_to_json<'i,'e,K,V>(iter: &'i mut dyn Iterator<Item=&'e (K,V)>) -> Result<String, serde_json::Error> where
 K: Serialize + Any,
 V: Serialize
 {
@@ -287,7 +287,7 @@ V: Serialize
   })
 }
 
-pub trait IntoConsumingIterSerializer<'a, K,V>: IntoIterator<Item=(K, V)> where
+pub trait IntoConsumingIterSerializer<'a,K,V>: IntoIterator<Item=(K,V)> where
 Self: Sized,
 K: Serialize + Any,
 V: Serialize,
@@ -308,12 +308,12 @@ V: Serialize,
 <Self as IntoIterator>::IntoIter: 'a
 { }
 
-struct SerializeConsumingIterWrapper<'i, K, V>
+struct SerializeConsumingIterWrapper<'i,K,V>
 {
-  pub iter: RefCell<&'i mut dyn Iterator<Item=(K, V)>>
+  pub iter: RefCell<&'i mut dyn Iterator<Item=(K,V)>>
 }
 
-impl<'i, K, V> Serialize for SerializeConsumingIterWrapper<'i, K, V> where
+impl<'i,K,V> Serialize for SerializeConsumingIterWrapper<'i,K,V> where
   K: Serialize + Any,
   V: Serialize
 {
@@ -373,7 +373,7 @@ impl<'i, K, V> Serialize for SerializeConsumingIterWrapper<'i, K, V> where
 /// Ok(()) }
 /// try_main().unwrap();
 /// ```
-pub fn consuming_iter_to_json<'i, K, V>(iter: &'i mut dyn Iterator<Item=(K, V)>) -> Result<String, serde_json::Error> where
+pub fn consuming_iter_to_json<'i,K,V>(iter: &'i mut dyn Iterator<Item=(K,V)>) -> Result<String, serde_json::Error> where
 K: Serialize + Any,
 V: Serialize
 {
@@ -406,7 +406,7 @@ V: Serialize
 /// Ok(()) }
 /// try_main().unwrap();
 /// ```
-pub fn vec_to_json<K, V>(vec: &Vec<(K,V)>) -> Result<String, serde_json::Error> where
+pub fn vec_to_json<K,V>(vec: &Vec<(K,V)>) -> Result<String, serde_json::Error> where
 K: Serialize + Any,
 V: Serialize
 {
@@ -437,11 +437,11 @@ V: Serialize
 /// Ok(()) }
 /// try_main().unwrap();
 /// ```
-pub fn json_to_vec<'a, K, V>(str: &'a str) -> Result<Vec<(K, V)>, serde_json::Error> where
+pub fn json_to_vec<'a,K,V>(str: &'a str) -> Result<Vec<(K,V)>, serde_json::Error> where
 for<'de> K: Deserialize<'de> + Any,
 for<'de> V: Deserialize<'de>
 {
-  let mut vec: Vec<(K, V)> = vec![];
+  let mut vec: Vec<(K,V)> = vec![];
   let v: serde_json::Value = serde_json::from_str(&str)?;
   let o = v.as_object().ok_or(serde_json::Error::custom("Value is not a map"))?;
   // handle strings specially as they are not objects
