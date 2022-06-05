@@ -100,7 +100,7 @@ impl<'i, 'e, K, V> Serialize for SerializeMapIterWrapper<'i, 'e, K, V> where
 /// Ok(()) }
 /// try_main().unwrap();
 /// ```
-pub fn map_iter_to_json<'a, K, V>(iter: &'a mut dyn Iterator<Item=(&'a K, &'a V)>) -> Result<String, serde_json::Error> where
+pub fn map_iter_to_json<'i, 'e, K, V>(iter: &'i mut dyn Iterator<Item=(&'e K, &'e V)>) -> Result<String, serde_json::Error> where
 K: Serialize + Any,
 V: Serialize
 {
@@ -135,7 +135,7 @@ V: Serialize
 /// Ok(()) }
 /// try_main().unwrap();
 /// ```
-pub fn map_to_json<'a, K, V>(map: &std::collections::HashMap<K, V>) -> Result<String, serde_json::Error> where
+pub fn map_to_json<K, V>(map: &std::collections::HashMap<K, V>) -> Result<String, serde_json::Error> where
 K: Serialize + Any,
 V: Serialize
 {
@@ -192,12 +192,12 @@ for<'de> V: Deserialize<'de>
   Ok(map)
 }
 
-struct SerializeVecIterWrapper<'a, K, V>
+struct SerializeVecIterWrapper<'i, 'e, K, V>
 {
-  pub iter: RefCell<&'a mut (dyn Iterator<Item=&'a (K, V)> + 'a)>
+  pub iter: RefCell<&'i mut dyn Iterator<Item=&'e (K, V)>>
 }
 
-impl<'a, K, V> Serialize for SerializeVecIterWrapper<'a, K, V> where
+impl<'i, 'e, K, V> Serialize for SerializeVecIterWrapper<'i, 'e, K, V> where
   K: Serialize + Any,
   V: Serialize
 {
@@ -257,7 +257,7 @@ impl<'a, K, V> Serialize for SerializeVecIterWrapper<'a, K, V> where
 /// Ok(()) }
 /// try_main().unwrap();
 /// ```
-pub fn vec_iter_to_json<'a, K, V>(iter: &'a mut dyn Iterator<Item=&'a (K, V)>) -> Result<String, serde_json::Error> where
+pub fn vec_iter_to_json<'i, 'e, K, V>(iter: &'i mut dyn Iterator<Item=&'e (K, V)>) -> Result<String, serde_json::Error> where
 K: Serialize + Any,
 V: Serialize
 {
@@ -290,7 +290,7 @@ V: Serialize
 /// Ok(()) }
 /// try_main().unwrap();
 /// ```
-pub fn vec_to_json<'a, K, V>(vec: &Vec<(K,V)>) -> Result<String, serde_json::Error> where
+pub fn vec_to_json<K, V>(vec: &Vec<(K,V)>) -> Result<String, serde_json::Error> where
 K: Serialize + Any,
 V: Serialize
 {
