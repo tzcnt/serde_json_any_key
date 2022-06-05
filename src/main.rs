@@ -31,8 +31,8 @@ fn main() {
   println!("{}", serialized); // Same output
   assert_eq!(serialized, canonical_serialization);
 
-  let it = map.to_json_map().unwrap();
-  println!("it: {}", it);
+  let map_it = map.iter().to_json_map().unwrap();
+  println!("map_it: {}", map_it);
 
   // Utility function also exists for vec of tuples
    // Same output
@@ -40,6 +40,9 @@ fn main() {
   let serialized = vec_to_json(&vec).unwrap();
   println!("{}", serialized); // Same output
   assert_eq!(serialized, canonical_serialization);
+
+  let vec_it = vec.iter().to_json_map().unwrap();
+  println!("vec_it: {}", vec_it);
 
   // You can also use any other data type that provides an Iter<&(K,V)> or Iter<(&K, &V)>
   // Same output

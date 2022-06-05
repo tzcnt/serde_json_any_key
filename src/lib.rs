@@ -9,7 +9,7 @@ use std::cell::RefCell;
 
 // https://github.com/rust-lang/rust/issues/49601
 
-pub trait IntoIterSerializer<'a,K,V>: IntoIterator<Item=(&'a K,&'a V)> where
+pub trait IntoMapIterSerializer<'a,K,V>: IntoIterator<Item=(&'a K,&'a V)> where
 Self: Sized,
 K: 'a + Serialize + Any,
 V: 'a + Serialize,
@@ -23,7 +23,7 @@ V: 'a + Serialize,
   }
 }
 
-impl<'a,K,V,T: IntoIterator<Item=(&'a K,&'a V)>> IntoIterSerializer<'a,K,V> for T where
+impl<'a,K,V,T: IntoIterator<Item=(&'a K,&'a V)>> IntoMapIterSerializer<'a,K,V> for T where
 T: IntoIterator<Item=(&'a K,&'a V)>,
 K: 'a + Serialize + Any,
 V: 'a + Serialize,
@@ -191,6 +191,27 @@ for<'de> V: Deserialize<'de>
   }
   Ok(map)
 }
+
+pub trait IntoVecIterSerializer<'a,K,V>: IntoIterator<Item=&'a (K, V)> where
+Self: Sized,
+K: 'a + Serialize + Any,
+V: 'a + Serialize,
+<Self as IntoIterator>::IntoIter: 'a
+{
+  fn to_json_map(self) -> Result<String, serde_json::Error> {
+    let mut iter = self.into_iter();
+    serde_json::to_string(&SerializeVecIterWrapper {
+      iter: RefCell::new(&mut iter)
+    })
+  }
+}
+
+impl<'a,K,V,T: IntoIterator<Item=&'a (K,V)>> IntoVecIterSerializer<'a,K,V> for T where
+T: IntoIterator<Item=&'a (K,V)>,
+K: 'a + Serialize + Any,
+V: 'a + Serialize,
+<Self as IntoIterator>::IntoIter: 'a
+{ }
 
 struct SerializeVecIterWrapper<'i, 'e, K, V>
 {
