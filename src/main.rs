@@ -27,28 +27,22 @@ fn main() {
   
   // Use this crate's utility function - elements are serialized lazily
   // Same output
-  let serialized = map_to_json(&map).unwrap();
+  let serialized = map.to_json_map().unwrap();
   println!("{}", serialized); // Same output
   assert_eq!(serialized, canonical_serialization);
-
-  let map_it = map.iter().to_json_map().unwrap();
-  println!("map_it: {}", map_it);
 
   // Utility function also exists for vec of tuples
    // Same output
   let vec = vec![(Test {a: 3, b: 5}, Test {a: 7, b: 9})];
-  let serialized = vec_to_json(&vec).unwrap();
+  let serialized = vec.to_json_map().unwrap();
   println!("{}", serialized); // Same output
   assert_eq!(serialized, canonical_serialization);
-
-  let vec_it = vec.iter().to_json_map().unwrap();
-  println!("vec_it: {}", vec_it);
 
   // You can also use any other data type that provides an Iter<&(K,V)> or Iter<(&K, &V)>
   // Same output
   let mut btree = std::collections::BTreeMap::<Test, Test>::new();
   btree.insert(Test {a: 3, b: 5}, Test {a: 7, b: 9});
-  let serialized = map_iter_to_json(&mut btree.iter()).unwrap();
+  let serialized = btree.to_json_map().unwrap();
   println!("{}", serialized);
   assert_eq!(serialized, canonical_serialization);
 
@@ -62,7 +56,7 @@ fn main() {
   let mut string_map: HashMap<String, i32> = HashMap::new();
   string_map.insert("foo".to_owned(), 1234i32);
   let ser1 = serde_json::to_string(&string_map).unwrap();
-  let ser2 = serde_json_any_key::map_to_json(&string_map).unwrap();
+  let ser2 = string_map.to_json_map().unwrap();
   println!("{}", ser2);
   assert_eq!(ser1, ser2);
   let deser1: HashMap<String, i32> = serde_json::from_str(&ser1).unwrap();

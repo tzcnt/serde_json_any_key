@@ -287,6 +287,101 @@ V: Serialize
   })
 }
 
+pub trait IntoConsumingIterSerializer<'a, K,V>: IntoIterator<Item=(K, V)> where
+Self: Sized,
+K: Serialize + Any,
+V: Serialize,
+<Self as IntoIterator>::IntoIter: 'a
+{
+  fn into_json_map(self) -> Result<String, serde_json::Error> {
+    let mut iter = self.into_iter();
+    serde_json::to_string(&SerializeConsumingIterWrapper {
+      iter: RefCell::new(&mut iter)
+    })
+  }
+}
+
+impl<'a,K,V,T: IntoIterator<Item=(K,V)>> IntoConsumingIterSerializer<'a,K,V> for T where
+T: IntoIterator<Item=(K,V)>,
+K: Serialize + Any,
+V: Serialize,
+<Self as IntoIterator>::IntoIter: 'a
+{ }
+
+struct SerializeConsumingIterWrapper<'i, K, V>
+{
+  pub iter: RefCell<&'i mut dyn Iterator<Item=(K, V)>>
+}
+
+impl<'i, K, V> Serialize for SerializeConsumingIterWrapper<'i, K, V> where
+  K: Serialize + Any,
+  V: Serialize
+{
+  fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where
+    S: Serializer
+  {
+    let mut ser_map = serializer.serialize_map(None)?;
+    let mut iter = self.iter.borrow_mut();
+    // handle strings specially so they don't get escaped and wrapped inside another string
+    if TypeId::of::<K>() == TypeId::of::<String>() {
+      while let Some((k, v)) = iter.next() {
+        let s = (&k as &dyn Any).downcast_ref::<String>().ok_or(S::Error::custom("Failed to serialize String as string"))?;
+        ser_map.serialize_entry(s, &v)?;
+      }
+    } else {
+      while let Some((k, v)) = iter.next() {
+        ser_map.serialize_entry(match &serde_json::to_string(&k)
+        {
+          Ok(key_string) => key_string,
+          Err(e) => { return Err(e).map_err(S::Error::custom); }
+        }, &v)?;
+      }
+    }
+    ser_map.end()
+  }
+}
+
+/// Serialize an Iterator<&(K, V)> like that given by Vec<(K, V)>::iter().
+/// serde_json::to_string() will be called on each K element during serialization.
+/// This will produce a JSON Map structure, as if called on a HashMap<K, V>.
+///
+/// # Examples
+/// ``` 
+/// use serde::Serialize;
+/// use serde_json::Error;
+/// use serde_json_any_key::*;
+/// 
+/// #[derive(Clone, Copy, Serialize, PartialEq, Eq, Hash)]
+/// pub struct Test {
+///   pub a: i32,
+///   pub b: i32
+/// }
+/// 
+/// fn try_main() -> Result<(), Error> {
+/// let vec: Vec<(Test,Test)> = vec![(Test {a: 3, b: 5}, Test {a: 7, b: 9})];
+/// 
+/// // Naive serde_json will serialize this as an array, not a map.
+/// // Outputs [[{"a":3,"b":5},{"a":7,"b":9}]]
+/// let ser1 = serde_json::to_string(&vec).unwrap();
+/// assert_eq!(ser1, "[[{\"a\":3,\"b\":5},{\"a\":7,\"b\":9}]]");
+/// 
+/// // Use this crate's utility function - elements are serialized lazily.
+/// // Outputs {"{\"a\":3,\"b\":5}":{"a":7,"b":9}}
+/// let ser2 = vec_iter_to_json(&mut vec.iter()).unwrap();
+///
+/// assert_eq!(ser2, "{\"{\\\"a\\\":3,\\\"b\\\":5}\":{\"a\":7,\"b\":9}}");
+/// Ok(()) }
+/// try_main().unwrap();
+/// ```
+pub fn consuming_iter_to_json<'i, K, V>(iter: &'i mut dyn Iterator<Item=(K, V)>) -> Result<String, serde_json::Error> where
+K: Serialize + Any,
+V: Serialize
+{
+  serde_json::to_string(&SerializeConsumingIterWrapper {
+    iter: RefCell::new(iter)
+  })
+}
+
 /// A simple wrapper around vec_iter_to_json for std::vec::Vec.
 ///
 /// # Examples
