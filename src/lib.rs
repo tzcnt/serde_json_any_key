@@ -9,78 +9,33 @@ use std::cell::RefCell;
 
 // https://github.com/rust-lang/rust/issues/49601
 
-trait MyTrait
+pub trait IntoIterSerializer<'a,K,V>: IntoIterator<Item=(&'a K,&'a V)> where
+Self: Sized,
+K: 'a + Serialize + Any,
+V: 'a + Serialize,
+<Self as IntoIterator>::IntoIter: 'a
 {
-    type T;
+  fn to_json_map(self) -> Result<String, serde_json::Error> {
+    let mut iter = self.into_iter();
+    serde_json::to_string(&SerializeMapIterWrapper {
+      iter: RefCell::new(&mut iter)
+    })
+  }
 }
 
-pub trait IntoIterSerializer<Other>: IntoIterator<Item=<Self as IntoIterSerializer<Other>>::Item> {
-  type Item: MyTrait<T = Other>;
-  //fn to_json_map(self) -> Result<String, serde_json::Error>;
-}
+impl<'a,K,V,T: IntoIterator<Item=(&'a K,&'a V)>> IntoIterSerializer<'a,K,V> for T where
+T: IntoIterator<Item=(&'a K,&'a V)>,
+K: 'a + Serialize + Any,
+V: 'a + Serialize,
+<Self as IntoIterator>::IntoIter: 'a
+{ }
 
-impl<U, Other> IntoIterSerializer<Other> for U where U: IntoIterator, U::Item: MyTrait<T = Other> {
-  type Item = <Self as IntoIterator>::Item;
-}
-
-// impl<'a, K, V, T> Serialize for IntoIterSerializer<&'a(K,V)> where
-// K: Serialize + Any,
-// V: Serialize,
-// {
-//   fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where
-//     S: Serializer
-//   {
-//     let mut ser_map = serializer.serialize_map(None)?;
-//     let mut iter = self.iter.borrow_mut();
-//     // handle strings specially so they don't get escaped and wrapped inside another string
-//     if TypeId::of::<K>() == TypeId::of::<String>() {
-//       while let Some((k, v)) = iter.next() {
-//         let s = (k as &dyn Any).downcast_ref::<String>().ok_or(S::Error::custom("Failed to serialize String as string"))?;
-//         ser_map.serialize_entry(s, &v)?;
-//       }
-//     } else {
-//       while let Some((k, v)) = iter.next() {
-//         ser_map.serialize_entry(match &serde_json::to_string(&k)
-//         {
-//           Ok(key_string) => key_string,
-//           Err(e) => { return Err(e).map_err(S::Error::custom); }
-//         }, &v)?;
-//       }
-//     }
-//     ser_map.end()
-//   }
-// }
-
-pub fn to_json_map<K,V,T>(this: T) -> Result<String, serde_json::Error> where
-for<'a> &'a T: IntoIterSerializer<(&'a K,&'a V)>
+struct SerializeMapIterWrapper<'i, 'e, K, V>
 {
-  let it = this.into_iter();
-  let x = it.next();
-  let xu = x.unwrap();
-  xu.
-  serde_json::to_string(&SerializeMapIterWrapper {
-    iter: RefCell::new(&mut it)
-  })
+  pub iter: RefCell<&'i mut (dyn Iterator<Item=(&'e K, &'e V)>)>
 }
 
-//IntoIterator<Item=&(K,V), IntoIter=I>
-// impl<K, V, I> IntoIterSerializer<K,V> for I where
-// for<'a> I: IntoIterator<Item=&'a (K,V), IntoIter=I>
-// {
-//   //type Item = I::Item;
-//   //type IntoIter = I;
-  
-//   fn to_json_map(self) -> Result<String, serde_json::Error> {
-//     Ok("ssd")
-//   }
-// }
-
-struct SerializeMapIterWrapper<'a, K, V>
-{
-  pub iter: RefCell<&'a mut (dyn Iterator<Item=(&'a K, &'a V)> + 'a)>
-}
-
-impl<'a, K, V> Serialize for SerializeMapIterWrapper<'a, K, V> where
+impl<'i, 'e, K, V> Serialize for SerializeMapIterWrapper<'i, 'e, K, V> where
   K: Serialize + Any,
   V: Serialize
 {

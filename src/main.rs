@@ -31,6 +31,9 @@ fn main() {
   println!("{}", serialized); // Same output
   assert_eq!(serialized, canonical_serialization);
 
+  let it = map.to_json_map().unwrap();
+  println!("it: {}", it);
+
   // Utility function also exists for vec of tuples
    // Same output
   let vec = vec![(Test {a: 3, b: 5}, Test {a: 7, b: 9})];
