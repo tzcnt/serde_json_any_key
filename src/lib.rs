@@ -211,46 +211,45 @@ for<'de> V: Deserialize<'de>
   Ok(map)
 }
 
-pub struct ShrinkWrap<K,V> {
+pub struct JsonToTupleIter<K,V> {
   iter: serde_json::map::IntoIter,
   k: std::marker::PhantomData<K>,
   v: std::marker::PhantomData<V>
 }
-impl<K,V> ShrinkWrap<K,V> {
-  pub fn new(str: &str) -> Self {
-    let x = serde_json::from_str(&str).unwrap();
-    let z = match x {
-      serde_json::Value::Object(map) => Some(map),
-            _ => None,
-    };
-    ShrinkWrap {
-      iter: z.unwrap().into_iter(),
-      k: std::marker::PhantomData,
-      v: std::marker::PhantomData
-    }
-  }
+
+pub fn json_to_iter<K,V>(str: &str) -> Result<JsonToTupleIter<K,V>, serde_json::Error> {
+  let json_value = serde_json::from_str(&str)?;
+  let json_map = match json_value {
+    serde_json::Value::Object(map) => map,
+          _ => { return Err(serde_json::Error::custom("Value is not a JSON map")); },
+  };
+  Ok(JsonToTupleIter {
+    iter: json_map.into_iter(),
+    k: std::marker::PhantomData,
+    v: std::marker::PhantomData
+  })
 }
 
-impl<K,V> Iterator for ShrinkWrap<K,V> where
+impl<K,V> Iterator for JsonToTupleIter<K,V> where
 for<'de> K: Deserialize<'de> + std::cmp::Eq + Hash + Any,
 for<'de> V: Deserialize<'de>
 {
   type Item = Result<(K,V), serde_json::Error>;
   fn next(&mut self) -> Option<Self::Item> {
-    let z = self.iter.next();
-    if z.is_none() {
-      return None;
+    match self.iter.next() {
+      Some(a) => {
+        let key_obj: K = match serde_json::from_str(&a.0) {
+          Ok(k) => k,
+          Err(e) => { return Some(Err(e)); }
+        };
+        let val_obj: V = match <V as Deserialize>::deserialize(a.1) {
+          Ok(v) => v,
+          Err(e) => { return Some(Err(e)); }
+        };
+        Some(Ok((key_obj, val_obj)))
+      }
+      None => None
     }
-    let a = z.unwrap();
-    let key_obj: K = match serde_json::from_str(&a.0) {
-      Ok(k) => k,
-      Err(e) => { return Some(Err(e)); }
-    };
-    let val_obj: V = match <V as Deserialize>::deserialize(a.1) {
-      Ok(v) => v,
-      Err(e) => { return Some(Err(e)); }
-    };
-    Some(Ok((key_obj, val_obj)))
   }
 }
 

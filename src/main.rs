@@ -52,7 +52,7 @@ fn main() {
   let deserialized_vec: Vec<(Test,Test)> = serde_json_any_key::json_to_vec(&serialized).unwrap();
   assert_eq!(vec, deserialized_vec);
 
-  let g: ShrinkWrap<Test, Test> = ShrinkWrap::new(&serialized);
+  let g = serde_json_any_key::json_to_iter::<Test,Test>(&serialized).unwrap();
   let mut bt: std::collections::BTreeMap<Test,Test> = std::collections::BTreeMap::new();
   bt.extend(g.map(|x|x.unwrap()));
   println!("{:?}", bt);
