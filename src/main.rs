@@ -52,6 +52,11 @@ fn main() {
   let deserialized_vec: Vec<(Test,Test)> = serde_json_any_key::json_to_vec(&serialized).unwrap();
   assert_eq!(vec, deserialized_vec);
 
+  let g: ShrinkWrap<Test, Test> = ShrinkWrap::new(&serialized);
+  let mut bt: std::collections::BTreeMap<Test,Test> = std::collections::BTreeMap::new();
+  bt.extend(g.map(|x|x.unwrap()));
+  println!("{:?}", bt);
+
   // If K actually is a String, it will behave identically to serde_json.
   let mut string_map: HashMap<String, i32> = HashMap::new();
   string_map.insert("foo".to_owned(), 1234i32);
