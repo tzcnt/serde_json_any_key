@@ -56,6 +56,7 @@ use std::hash::Hash;
 use serde::ser::{Serialize, Serializer, SerializeMap, Error};
 use serde::de::{Deserialize};
 use std::cell::RefCell;
+use std::rc::Rc;
 
 // I'm grateful that I was able to avoid doing it this way:
 // https://github.com/rust-lang/rust/issues/49601
@@ -191,7 +192,7 @@ for<'de> V: Deserialize<'de>
 {
   let mut map: std::collections::HashMap<K,V> = std::collections::HashMap::new();
   let v: serde_json::Value = serde_json::from_str(&str)?;
-  let o = v.as_object().ok_or(serde_json::Error::custom("Value is not a map"))?;
+  let o = v.as_object().ok_or(serde_json::Error::custom("Value is not a JSON map"))?;
   // handle strings specially as they are not objects
   if TypeId::of::<K>() == TypeId::of::<String>() {
     for (key, val) in o.iter() {
@@ -208,6 +209,133 @@ for<'de> V: Deserialize<'de>
   }
   Ok(map)
 }
+
+// pub struct JsonToMapIterAdapter<'a,K,V> {
+//   v: Option<Box<serde_json::Value>>,
+//   //o1: Option<Box<Option<Box<&'a serde_json::Map<String, serde_json::Value>>>>>,
+//   o: Option<Box<&'a serde_json::Map<String, serde_json::Value>>>,
+//   b: Option<Box<&'a mut dyn Iterator<Item = Result<(K,V), serde_json::Error>>>>,
+//   e: Option<serde_json::Error>
+// }
+
+pub struct JsonToMapNonStringIterAdapter<'a,K,V> {
+  v: Rc<RefCell<Option<serde_json::Value>>>,
+  //o1: Option<Box<Option<Box<&'a serde_json::Map<String, serde_json::Value>>>>>,
+  o: Rc<Option<&'a serde_json::Map<String, serde_json::Value>>>,
+  b: Option<Rc<RefCell<serde_json::map::Iter<'a>>>>,
+  e: Option<serde_json::Error>,
+  pk: std::marker::PhantomData<K>,
+  pv: std::marker::PhantomData<V>
+}
+
+// impl<'a,K,V> JsonToMapNonStringIterAdapter<'a,K,V> {
+//   pub fn new(s: &'a str) -> Self {
+
+//   }
+// }
+
+// TODO try return Just a holder for v, which then impls IntoIterator which then returns an iterator which refers to the original holder
+
+impl<'a,K,V> Iterator for JsonToMapNonStringIterAdapter<'a,K,V> where
+for<'de> K: Deserialize<'de> + std::cmp::Eq + Hash + Any + 'a,
+for<'de> V: Deserialize<'de> + 'a
+{
+  type Item = Result<(K,V), serde_json::Error>;
+  fn next(&mut self) -> Option<Self::Item> {
+    let x = self.b.as_ref().unwrap().clone();
+    let mut y = x.borrow_mut();
+    let z = y.next();
+    if z.is_none() {
+      return None;
+    }
+    let a = z.unwrap();
+    let key_obj: K = match serde_json::from_str(a.0) {
+      Ok(k) => k,
+      Err(e) => { return Some(Err(e)); }
+    };
+    let val_obj: V = match <V as Deserialize>::deserialize(a.1) {
+      Ok(v) => v,
+      Err(e) => { return Some(Err(e)); }
+    };
+    Some(Ok((key_obj, val_obj)))
+    // if let Some((&key, &val)) = z {
+    //     let key_obj: K = match serde_json::from_str(&key) {
+    //       Ok(k) => k,
+    //       Err(e) => { return Some(Err(e)); }
+    //     };
+    //     let val_obj: V = match <V as Deserialize>::deserialize(val) {
+    //       Ok(v) => v,
+    //       Err(e) => { return Some(Err(e)); }
+    //     };
+    //     Some(Ok((key_obj, val_obj)))
+    // } else {
+    //   None
+    // }
+    //Some(.unwrap().unwrap())
+    //Box::new(std::iter::once(Err(serde_json::Error::custom("Value is not a JSON map"))))
+  }
+}
+
+pub fn json_to_map_iter<'a,K,V>(str: &'a str) -> JsonToMapNonStringIterAdapter<'a,K,V> where
+for<'de> K: Deserialize<'de> + std::cmp::Eq + Hash + Any + 'a,
+for<'de> V: Deserialize<'de> + 'a
+{
+  let mut adapter: JsonToMapNonStringIterAdapter<K,V> = JsonToMapNonStringIterAdapter {
+    v: Rc::new(RefCell::new(None)),
+    //o1: None,
+    o: Rc::new(None),
+    b: None,
+    e: None,
+    pk: std::marker::PhantomData,
+    pv: std::marker::PhantomData
+  };
+  match serde_json::from_str(&str) {
+    Ok(v) => {
+      adapter.v = Rc::new(RefCell::new(Some(v)));
+      //adapter.o = Rc::new(Some(adapter.v.borrow().as_ref().unwrap().as_object().unwrap()));
+      //adapter.b = Rc::new(Some(adapter.o.as_ref().unwrap().iter()));
+    },
+    Err(e) => { adapter.e = Some(e); }
+  };
+  adapter
+  //let x = adapter.v.unwrap().as_object().unwrap();
+  //adapter.o = Rc::new(Some(adapter.v.borrow().as_ref().unwrap().as_object().unwrap()));
+  // match {
+  //   Some(o) => adapter.o = Some(Box::new(o)),
+  //   None => { adapter.e = Some(serde_json::Error::custom("Value is not a JSON map")); return adapter; }
+  // };
+  
+  // handle strings specially as they are not objects
+  //if TypeId::of::<K>() == TypeId::of::<String>() {
+  //  adapter.b = Some(Box::new(&mut adapter.o.unwrap().iter().map(|(&k, &v)| Ok((<K as Deserialize>::deserialize(serde_json::Value::from(k.as_str()))?, <V as Deserialize>::deserialize(v)?)))));
+  //  adapter
+  //} else {
+    //adapter.b = Some(Box::new(&mut adapter.o.unwrap().iter().map(|(k, &v)| Ok((serde_json::from_str(k)?, <V as Deserialize>::deserialize(v)?)))));
+    //adapter.b = Rc::new(Some(adapter.o.as_ref().unwrap().iter()));
+    //adapter
+  //}
+}
+
+// pub fn json_to_map_iter<'a,K,V>(str: &'a str) -> Box<dyn Iterator<Item = Result<(K,V), serde_json::Error>> + 'a> where
+// for<'de> K: Deserialize<'de> + std::cmp::Eq + Hash + Any + 'a,
+// for<'de> V: Deserialize<'de> + 'a
+// {
+//   let v: serde_json::Value = match serde_json::from_str(&str) {
+//     Ok(v) => v,
+//     Err(e) => return Box::new(std::iter::once(Err(e)))
+//   };
+//   let o: serde_json::Map<String, serde_json::Value> = match v.as_object() {
+//     Some(o) => *o,
+//     None => return Box::new(std::iter::once(Err(serde_json::Error::custom("Value is not a JSON map"))))
+//   };
+//   // handle strings specially as they are not objects
+//   if TypeId::of::<K>() == TypeId::of::<String>() {
+//     Box::new(o.iter().map(|(&k, &v)| Ok((<K as Deserialize>::deserialize(serde_json::Value::from(k.as_str()))?, <V as Deserialize>::deserialize(v)?))))
+//   } else {
+//     let result = Box::new(o.iter().map(|(k, &v)| Ok((serde_json::from_str(k)?, <V as Deserialize>::deserialize(v)?))));
+//     result
+//   }
+// }
 
 pub trait VecIterToJson<'a,K,V>: IntoIterator<Item=&'a (K,V)> where
 Self: Sized,
@@ -435,7 +563,7 @@ for<'de> V: Deserialize<'de>
 {
   let mut vec: Vec<(K,V)> = vec![];
   let v: serde_json::Value = serde_json::from_str(&str)?;
-  let o = v.as_object().ok_or(serde_json::Error::custom("Value is not a map"))?;
+  let o = v.as_object().ok_or(serde_json::Error::custom("Value is not a JSON map"))?;
   // handle strings specially as they are not objects
   if TypeId::of::<K>() == TypeId::of::<String>() {
     for (key, val) in o.iter() {
