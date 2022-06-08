@@ -231,7 +231,7 @@ pub fn json_to_iter<K,V>(str: &str) -> Result<JsonToTupleIter<K,V>, serde_json::
 }
 
 impl<K,V> Iterator for JsonToTupleIter<K,V> where
-for<'de> K: Deserialize<'de> + std::cmp::Eq + Hash + Any,
+for<'de> K: Deserialize<'de> + Any,
 for<'de> V: Deserialize<'de>
 {
   type Item = Result<(K,V), serde_json::Error>;
