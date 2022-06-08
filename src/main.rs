@@ -52,10 +52,21 @@ fn main() {
   let deserialized_vec: Vec<(Test,Test)> = serde_json_any_key::json_to_vec(&serialized).unwrap();
   assert_eq!(vec, deserialized_vec);
 
+  
+  let ds: HashMap<String,Test> = serde_json_any_key::json_to_map(&serialized).unwrap();
+  println!("{:?}",ds);
+{
+  let g = serde_json_any_key::json_to_iter::<String,Test>(&serialized).unwrap();
+  let mut bt: std::collections::BTreeMap<String,Test> = std::collections::BTreeMap::new();
+  bt.extend(g.map(|x|x.unwrap()));
+  println!("{:?}", bt);
+}
+{
   let g = serde_json_any_key::json_to_iter::<Test,Test>(&serialized).unwrap();
   let mut bt: std::collections::BTreeMap<Test,Test> = std::collections::BTreeMap::new();
   bt.extend(g.map(|x|x.unwrap()));
   println!("{:?}", bt);
+}
 
   // If K actually is a String, it will behave identically to serde_json.
   let mut string_map: HashMap<String, i32> = HashMap::new();

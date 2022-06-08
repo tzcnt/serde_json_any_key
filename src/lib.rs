@@ -238,16 +238,22 @@ for<'de> V: Deserialize<'de>
   fn next(&mut self) -> Option<Self::Item> {
     match self.iter.next() {
       Some(a) => {
-        let key_obj: K = match serde_json::from_str(&a.0) {
-          Ok(k) => k,
-          Err(e) => { return Some(Err(e)); }
+        let key_obj: K = match TypeId::of::<K>() == TypeId::of::<String>() {
+          true => match <K as Deserialize>::deserialize(serde_json::Value::from(a.0)) {
+            Ok(k) => k,
+            Err(e) => { return Some(Err(e)); }
+          },
+          false => match serde_json::from_str(&a.0) {
+            Ok(k) => k,
+            Err(e) => { return Some(Err(e)); }
+          }
         };
         let val_obj: V = match <V as Deserialize>::deserialize(a.1) {
           Ok(v) => v,
           Err(e) => { return Some(Err(e)); }
         };
         Some(Ok((key_obj, val_obj)))
-      }
+      },
       None => None
     }
   }
