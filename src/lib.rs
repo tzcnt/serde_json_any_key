@@ -52,12 +52,11 @@ extern crate serde;
 extern crate serde_json;
 
 use std::any::{Any, TypeId};
-use std::hash::Hash;
-use serde::ser::{Serialize, Serializer, SerializeMap, Error};
-use serde::de::{Deserialize};
-use serde_json::map::IntoIter;
 use std::cell::RefCell;
-use std::rc::Rc;
+use std::hash::Hash;
+use std::marker::PhantomData;
+use serde::ser::{Serialize, Serializer, SerializeMap, Error};
+use serde::de::{Deserialize, Deserializer, Visitor};
 
 // I'm grateful that I was able to avoid doing it this way:
 // https://github.com/rust-lang/rust/issues/49601
@@ -503,7 +502,220 @@ for<'de> V: Deserialize<'de>
   Ok(vec)
 }
 
+pub mod any_key_map {
+use super::*;
+use serde::de::{MapAccess};
+use std::fmt;
 
+  pub fn serialize<'s, S, C, K, V>(coll: C, serializer: S) -> Result<S::Ok, S::Error>
+  where S: Serializer,
+  C: IntoIterator<Item=(&'s K,&'s V)>,
+  K: Serialize + Any + 's,
+  V: Serialize + 's
+  {
+    let mut iter = coll.into_iter();
+    let wrap = SerializeMapIterWrapper {
+      iter: RefCell::new(&mut iter),
+    };
+    wrap.serialize(serializer)
+  }
+
+  pub(crate) struct MapIter<'de, A, K, V> {
+    pub(crate) access: A,
+    marker: PhantomData<(&'de (), K, V)>,
+  }
+
+  impl<'de, A, K, V> MapIter<'de, A, K, V> {
+      pub(crate) fn new(access: A) -> Self
+      where
+          A: MapAccess<'de>,
+      {
+          Self {
+              access,
+              marker: PhantomData,
+          }
+      }
+  }
+
+  impl<'de, A, K, V> Iterator for MapIter<'de, A, K, V>
+  where
+      A: MapAccess<'de>,
+      K: Deserialize<'de>,
+      V: Deserialize<'de>,
+  {
+      type Item = Result<(K, V), A::Error>;
+
+      fn next(&mut self) -> Option<Self::Item> {
+          self.access.next_entry().transpose()
+      }
+
+      fn size_hint(&self) -> (usize, Option<usize>) {
+          match self.access.size_hint() {
+              Some(size) => (size, Some(size)),
+              None => (0, None),
+          }
+      }
+  }
+
+  pub fn deserialize<'d, D, C, K, V>(deserializer: D) -> Result<C, D::Error> where
+    D: Deserializer<'d>,
+    C: FromIterator<(K,V)> + Sized,
+    for<'de> K: Deserialize<'de> + Any + 'd,
+    for<'de> V: Deserialize<'de> + 'd,
+  {
+    struct Helper<K,V>(PhantomData<(K,V)>);
+    impl<'d,K,V> Visitor<'d> for Helper<K,V>
+    where
+    for<'de> K: Deserialize<'de> + Any + 'd,
+    for<'de> V: Deserialize<'de> + 'd
+    {
+        type Value = Vec<(K,V)>;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(formatter, "a sequence")
+        }
+
+        fn visit_map<A>(self, seq: A) -> Result<Self::Value, A::Error>
+        where
+            A: MapAccess<'d>,
+        {
+          let mut vec = Vec::<(K,V)>::new();
+          for item in MapIter::<'d, A, String, V>::new(seq)
+              .map(|res| {
+                res.and_then(|value: (String,V)| {
+                  let key_obj: K = match TypeId::of::<K>() == TypeId::of::<String>() {
+                    true => match <K as Deserialize>::deserialize(serde_json::Value::from(value.0)) {
+                      Ok(k) => k,
+                      Err(e) => { return Err(e).map_err(serde::de::Error::custom); }
+                    },
+                    false => match serde_json::from_str(&value.0) {
+                      Ok(k) => k,
+                      Err(e) => { return Err(e).map_err(serde::de::Error::custom); }
+                    }
+                  };
+                  Ok((key_obj, value.1))
+                })
+              }) {
+                vec.push(item?);
+              }
+          Ok(vec)
+        }
+    }
+    
+    deserializer
+        .deserialize_map(Helper(PhantomData))
+        .map(C::from_iter)
+  }
+}
+
+#[allow(dead_code)]
+pub mod any_key_vec {
+  use super::*;
+  use serde::de::{MapAccess};
+  use std::fmt;
+  pub fn serialize<'s, S, C, K, V>(coll: C, serializer: S) -> Result<S::Ok, S::Error>
+  where S: Serializer,
+  C: IntoIterator<Item=&'s (K,V)>,
+  K: Serialize + Any + 's,
+  V: Serialize + 's
+  {
+    let mut iter = coll.into_iter();
+    let wrap = SerializeVecIterWrapper {
+      iter: RefCell::new(&mut iter),
+    };
+    wrap.serialize(serializer)
+  }
+
+  pub(crate) struct MapIter<'de, A, K, V> {
+    pub(crate) access: A,
+    marker: PhantomData<(&'de (), K, V)>,
+  }
+
+  impl<'de, A, K, V> MapIter<'de, A, K, V> {
+      pub(crate) fn new(access: A) -> Self
+      where
+          A: MapAccess<'de>,
+      {
+          Self {
+              access,
+              marker: PhantomData,
+          }
+      }
+  }
+
+  impl<'de, A, K, V> Iterator for MapIter<'de, A, K, V>
+  where
+      A: MapAccess<'de>,
+      K: Deserialize<'de>,
+      V: Deserialize<'de>,
+  {
+      type Item = Result<(K, V), A::Error>;
+
+      fn next(&mut self) -> Option<Self::Item> {
+          let ret = self.access.next_entry().transpose();
+          let y = ret;
+          return y;
+      }
+
+      fn size_hint(&self) -> (usize, Option<usize>) {
+          match self.access.size_hint() {
+              Some(size) => (size, Some(size)),
+              None => (0, None),
+          }
+      }
+  }
+
+  pub fn deserialize<'d, D, C, K, V>(deserializer: D) -> Result<C, D::Error> where
+    D: Deserializer<'d>,
+    C: FromIterator<(K,V)> + Sized,
+    for<'de> K: Deserialize<'de> + Any + 'd,
+    for<'de> V: Deserialize<'de> + 'd,
+  {
+    struct Helper<K,V>(PhantomData<(K,V)>);
+    impl<'d,K,V> Visitor<'d> for Helper<K,V>
+    where
+    for<'de> K: Deserialize<'de> + Any + 'd,
+    for<'de> V: Deserialize<'de> + 'd
+    {
+        type Value = Vec<(K,V)>;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(formatter, "a sequence")
+        }
+
+        fn visit_map<A>(self, seq: A) -> Result<Self::Value, A::Error>
+        where
+            A: MapAccess<'d>,
+        {
+          let mut vec = Vec::<(K,V)>::new();
+          for item in MapIter::<'d, A, String, V>::new(seq)
+              .map(|res| {
+                res.and_then(|value: (String,V)| {
+                  let key_obj: K = match TypeId::of::<K>() == TypeId::of::<String>() {
+                    true => match <K as Deserialize>::deserialize(serde_json::Value::from(value.0)) {
+                      Ok(k) => k,
+                      Err(e) => { return Err(e).map_err(serde::de::Error::custom); }
+                    },
+                    false => match serde_json::from_str(&value.0) {
+                      Ok(k) => k,
+                      Err(e) => { return Err(e).map_err(serde::de::Error::custom); }
+                    }
+                  };
+                  Ok((key_obj, value.1))
+                    //value.parse::<S>().map_err(Error::custom)
+                })
+              }) {
+                vec.push(item?);
+              }
+          Ok(vec)
+        }
+    }
+    
+    deserializer
+        .deserialize_map(Helper(PhantomData))
+        .map(C::from_iter)
+  }
+}
 
 #[cfg(test)]
 mod tests {
@@ -515,6 +727,112 @@ mod tests {
   pub struct Test {
     pub a: i32,
     pub b: i32
+  }
+
+  #[test]
+  fn test_struct_serde_with_map() {
+    #[derive(Clone, Deserialize, Serialize, PartialEq, Eq, Debug)]
+    struct SerdeWithMap {
+      #[serde(with = "any_key_map")]
+      pub inner: HashMap<Test,Test>
+    }
+    let mut data = SerdeWithMap {
+      inner: HashMap::new()
+    };
+    data.inner.insert(Test {a: 3, b: 5}, Test {a: 7, b: 9});
+    let serialized = serde_json::to_string(&data).unwrap();
+    assert_eq!(serialized, "{\"inner\":{\"{\\\"a\\\":3,\\\"b\\\":5}\":{\"a\":7,\"b\":9}}}");
+    let deser: SerdeWithMap = serde_json::from_str(&serialized).unwrap();
+    assert_eq!(data, deser);
+  }
+
+  #[test]
+  fn test_struct_serde_with_vec() {
+    #[derive(Clone, Deserialize, Serialize, PartialEq, Eq, Debug)]
+    struct SerdeWithVec {
+      #[serde(with = "any_key_vec")]
+      pub inner: Vec<(Test,Test)>
+    }
+    let mut data = SerdeWithVec {
+      inner: vec![]
+    };
+    data.inner.push((Test {a: 3, b: 5}, Test {a: 7, b: 9}));
+    let serialized = serde_json::to_string(&data).unwrap();
+    assert_eq!(serialized, "{\"inner\":{\"{\\\"a\\\":3,\\\"b\\\":5}\":{\"a\":7,\"b\":9}}}");
+    let deser: SerdeWithVec = serde_json::from_str(&serialized).unwrap();
+    assert_eq!(data, deser);
+  }
+
+  #[test]
+  fn test_string_serde_with_map() {
+    #[derive(Clone, Deserialize, Serialize, PartialEq, Eq, Debug)]
+    struct SerdeWithMap {
+      #[serde(with = "any_key_map")]
+      pub inner: HashMap<String, i32>
+    }
+    let mut data = SerdeWithMap {
+      inner: HashMap::new()
+    };
+    data.inner.insert("foo".to_string(), 5);
+    
+    let serialized = serde_json::to_string(&data).unwrap();
+    assert_eq!(serialized, "{\"inner\":{\"foo\":5}}");
+    let deser: SerdeWithMap = serde_json::from_str(&serialized).unwrap();
+    assert_eq!(data, deser);
+  }
+  
+  #[test]
+  fn test_string_serde_with_vec() {
+    #[derive(Clone, Deserialize, Serialize, PartialEq, Eq, Debug)]
+    struct SerdeWithVec {
+      #[serde(with = "any_key_vec")]
+      pub inner: Vec<(String, i32)>
+    }
+    let mut data = SerdeWithVec {
+      inner: vec![]
+    };
+    data.inner.push(("foo".to_string(), 5));
+    
+    let serialized = serde_json::to_string(&data).unwrap();
+    assert_eq!(serialized, "{\"inner\":{\"foo\":5}}");
+    let deser: SerdeWithVec = serde_json::from_str(&serialized).unwrap();
+    assert_eq!(data, deser);
+  }
+
+  #[test]
+  fn test_int_serde_with_map() {
+    #[derive(Clone, Deserialize, Serialize, PartialEq, Eq, Debug)]
+    struct SerdeWithMap {
+      #[serde(with = "any_key_map")]
+      pub inner: HashMap<i32, Test>
+    }
+    let mut data = SerdeWithMap {
+      inner: HashMap::new()
+    };
+    data.inner.insert(5, Test {a: 6, b: 7});
+    
+    let serialized = serde_json::to_string(&data).unwrap();
+    assert_eq!(serialized, "{\"inner\":{\"5\":{\"a\":6,\"b\":7}}}");
+    let deser: SerdeWithMap = serde_json::from_str(&serialized).unwrap();
+    assert_eq!(data, deser);
+  }
+  
+  #[test]
+  fn test_int_serde_with_vec() {
+    #[derive(Clone, Deserialize, Serialize, PartialEq, Eq, Debug)]
+    struct SerdeWithVec {
+      #[serde(with = "any_key_vec")]
+      pub inner: Vec<(i32, Test)>
+    }
+    let mut data = SerdeWithVec {
+      inner: vec![]
+    };
+    data.inner.push((5, Test {a: 6, b: 7}));
+    
+    let serialized = serde_json::to_string(&data).unwrap();
+    assert_eq!(serialized, "{\"inner\":{\"5\":{\"a\":6,\"b\":7}}}");
+    let deser: SerdeWithVec = serde_json::from_str(&serialized).unwrap();
+    assert_eq!(data, deser);
   }
 
   #[test]
