@@ -105,6 +105,7 @@ fn main() {
   nested.map = map;
   nested.vec = vec;
   nested.btr = btree;
+  // Now you can use the regular serde_json functions
   let serialized = serde_json::to_string(&nested).unwrap();
   println!("9 - {}", serialized);
   let deser: NestedTest = serde_json::from_str(&serialized).unwrap();
