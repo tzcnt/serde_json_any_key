@@ -751,7 +751,7 @@ mod tests {
   }
 
   #[test]
-  fn test_nested_struct_top_level_map() {
+  fn test_struct_attr_top_level_map() {
     #[derive(Clone, Deserialize, Serialize, PartialEq, Eq, Debug)]
     struct SerdeWithMap {
       #[serde(with = "any_key_map")]
@@ -805,7 +805,7 @@ mod tests {
   }
   
   #[test]
-  fn test_nested_struct_serde_1_level() {
+  fn test_struct_attr_1_level() {
     #[derive(Clone, Deserialize, Serialize, PartialEq, Eq, Debug)]
     struct SerdeWithMap {
       #[serde(with = "any_key_map")]
@@ -843,7 +843,7 @@ mod tests {
   }
 
   #[test]
-  fn test_nested_struct_serde_2_level() {
+  fn test_struct_attr_2_level() {
     #[derive(Clone, Deserialize, Serialize, PartialEq, Eq, Debug)]
     struct SerdeWithMap {
       #[serde(with = "any_key_map")]
