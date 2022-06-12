@@ -662,13 +662,14 @@ use std::fmt;
     for<'de> K: Deserialize<'de> + Any + 'd,
     for<'de> V: Deserialize<'de> + 'd,
   {
-    struct Helper<K,V>(PhantomData<(K,V)>);
-    impl<'d,K,V> Visitor<'d> for Helper<K,V>
+    struct Helper<C,K,V>(PhantomData<(C,K,V)>);
+    impl<'d,C,K,V> Visitor<'d> for Helper<C,K,V>
     where
+    C: FromIterator<(K,V)> + Sized,
     for<'de> K: Deserialize<'de> + Any + 'd,
     for<'de> V: Deserialize<'de> + 'd
     {
-        type Value = Vec<(K,V)>;
+        type Value = C;
 
         fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
             write!(formatter, "a JSON map")
@@ -678,32 +679,28 @@ use std::fmt;
         where
             A: MapAccess<'d>,
         {
-          let mut vec = Vec::<(K,V)>::new();
-          for item in MapIter::<'d, A, String, V>::new(seq)
-              .map(|res| {
-                res.and_then(|value: (String,V)| {
-                  let key_obj: K = match TypeId::of::<K>() == TypeId::of::<String>() {
-                    true => match <K as Deserialize>::deserialize(serde_json::Value::from(value.0)) {
-                      Ok(k) => k,
-                      Err(e) => { return Err(e).map_err(serde::de::Error::custom); }
-                    },
-                    false => match serde_json::from_str(&value.0) {
-                      Ok(k) => k,
-                      Err(e) => { return Err(e).map_err(serde::de::Error::custom); }
-                    }
-                  };
-                  Ok((key_obj, value.1))
-                })
-              }) {
-                vec.push(item?);
-              }
-          Ok(vec)
+          // https://stackoverflow.com/a/26370894/19260728
+          let coll: Result<C, A::Error> = MapIter::<'d, A, String, V>::new(seq)
+            .map(|res| {
+              res.and_then(|value: (String,V)| {
+                let key_obj: K = match TypeId::of::<K>() == TypeId::of::<String>() {
+                  true => match <K as Deserialize>::deserialize(serde_json::Value::from(value.0)) {
+                    Ok(k) => k,
+                    Err(e) => { return Err(e).map_err(serde::de::Error::custom); }
+                  },
+                  false => match serde_json::from_str(&value.0) {
+                    Ok(k) => k,
+                    Err(e) => { return Err(e).map_err(serde::de::Error::custom); }
+                  }
+                };
+                Ok((key_obj, value.1))
+              })
+            }).collect();
+          coll
         }
     }
     
-    deserializer
-        .deserialize_map(Helper(PhantomData))
-        .map(C::from_iter)
+    deserializer.deserialize_map(Helper(PhantomData))
   }
 }
 
@@ -787,13 +784,14 @@ pub mod any_key_vec {
     for<'de> K: Deserialize<'de> + Any + 'd,
     for<'de> V: Deserialize<'de> + 'd,
   {
-    struct Helper<K,V>(PhantomData<(K,V)>);
-    impl<'d,K,V> Visitor<'d> for Helper<K,V>
+    struct Helper<C,K,V>(PhantomData<(C,K,V)>);
+    impl<'d,C,K,V> Visitor<'d> for Helper<C,K,V>
     where
+    C: FromIterator<(K,V)> + Sized,
     for<'de> K: Deserialize<'de> + Any + 'd,
     for<'de> V: Deserialize<'de> + 'd
     {
-        type Value = Vec<(K,V)>;
+        type Value = C;
 
         fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
             write!(formatter, "a JSON map")
@@ -803,88 +801,29 @@ pub mod any_key_vec {
         where
             A: MapAccess<'d>,
         {
-          let mut vec = Vec::<(K,V)>::new();
-          for item in MapIter::<'d, A, String, V>::new(seq)
-              .map(|res| {
-                res.and_then(|value: (String,V)| {
-                  let key_obj: K = match TypeId::of::<K>() == TypeId::of::<String>() {
-                    true => match <K as Deserialize>::deserialize(serde_json::Value::from(value.0)) {
-                      Ok(k) => k,
-                      Err(e) => { return Err(e).map_err(serde::de::Error::custom); }
-                    },
-                    false => match serde_json::from_str(&value.0) {
-                      Ok(k) => k,
-                      Err(e) => { return Err(e).map_err(serde::de::Error::custom); }
-                    }
-                  };
-                  Ok((key_obj, value.1))
-                })
-              }) {
-                vec.push(item?);
-              }
-          Ok(vec)
+          // https://stackoverflow.com/a/26370894/19260728
+          let coll: Result<C, A::Error> = MapIter::<'d, A, String, V>::new(seq)
+            .map(|res| {
+              res.and_then(|value: (String,V)| {
+                let key_obj: K = match TypeId::of::<K>() == TypeId::of::<String>() {
+                  true => match <K as Deserialize>::deserialize(serde_json::Value::from(value.0)) {
+                    Ok(k) => k,
+                    Err(e) => { return Err(e).map_err(serde::de::Error::custom); }
+                  },
+                  false => match serde_json::from_str(&value.0) {
+                    Ok(k) => k,
+                    Err(e) => { return Err(e).map_err(serde::de::Error::custom); }
+                  }
+                };
+                Ok((key_obj, value.1))
+              })
+            }).collect();
+          coll
         }
     }
     
-    deserializer
-        .deserialize_map(Helper(PhantomData))
-        .map(C::from_iter)
+    deserializer.deserialize_map(Helper(PhantomData))
   }
-
-  // This implementation would be more efficient (doesn't create an intermediate Vec)
-  // But then #[derive(Deserialize)] can't pick between Extend<(K,V)> and Extend<(&K,&V)>
-  // User would be required to specify all template types in their #[derive(Deserialize<>)]
-  // Perhaps with future language features, it will be possible to make this ergonomic
-
-  // pub fn deserialize<'d, D, C, K, V>(deserializer: D) -> Result<C, D::Error> where
-  //   D: Deserializer<'d>,
-  //   C: Default + Extend<(K,V)> + Sized,
-  //   for<'de> K: Deserialize<'de> + Any + 'd,
-  //   for<'de> V: Deserialize<'de> + 'd,
-  // {
-  //   struct Helper<C,K,V>(PhantomData<(C,K,V)>);
-  //   impl<'d,C,K,V> Visitor<'d> for Helper<C,K,V>
-  //   where
-  //   C: Default + Extend<(K,V)> + Sized,
-  //   for<'de> K: Deserialize<'de> + Any + 'd,
-  //   for<'de> V: Deserialize<'de> + 'd
-  //   {
-  //       type Value = C;
-
-  //       fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-  //           write!(formatter, "a JSON map")
-  //       }
-
-  //       fn visit_map<A>(self, seq: A) -> Result<Self::Value, A::Error>
-  //       where
-  //           A: MapAccess<'d>,
-  //       {
-  //         let mut coll: C = C::default();
-  //         for item in MapIter::<'d, A, String, V>::new(seq)
-  //             .map(|res| {
-  //               res.and_then(|value: (String,V)| {
-  //                 let key_obj: K = match TypeId::of::<K>() == TypeId::of::<String>() {
-  //                   true => match <K as Deserialize>::deserialize(serde_json::Value::from(value.0)) {
-  //                     Ok(k) => k,
-  //                     Err(e) => { return Err(e).map_err(serde::de::Error::custom); }
-  //                   },
-  //                   false => match serde_json::from_str(&value.0) {
-  //                     Ok(k) => k,
-  //                     Err(e) => { return Err(e).map_err(serde::de::Error::custom); }
-  //                   }
-  //                 };
-  //                 Ok((key_obj, value.1))
-  //               })
-  //             }) {
-  //               coll.extend(Some(item?));
-  //             }
-  //         Ok(coll)
-  //       }
-  //   }
-    
-  //   deserializer
-  //       .deserialize_map(Helper(PhantomData))
-  // }
 }
 
 #[cfg(test)]
