@@ -749,6 +749,60 @@ mod tests {
     pub b: i32,
     pub c: String
   }
+
+  #[test]
+  fn test_nested_struct_top_level_map() {
+    #[derive(Clone, Deserialize, Serialize, PartialEq, Eq, Debug)]
+    struct SerdeWithMap {
+      #[serde(with = "any_key_map")]
+      pub inner: HashMap<TestWithString,TestWithString>
+    }
+    
+    #[derive(Clone, Deserialize, Serialize, PartialEq, Eq, Debug)]
+    struct SerdeWithVec {
+      #[serde(with = "any_key_vec")]
+      pub inner: Vec<(TestWithString,TestWithString)>
+    }
+
+    #[derive(Clone, Deserialize, Serialize, PartialEq, Eq, Debug)]
+    struct Outer {
+      pub map: SerdeWithMap,
+      pub vec: SerdeWithVec
+    }
+
+    let mut map = SerdeWithMap { inner: HashMap::new() };
+    map.inner.insert(TestWithString {a: 3, b: 5, c: "foo".to_string()},
+      TestWithString {a: 7, b: 9, c: "bar".to_string()});
+
+    let mut vec = SerdeWithVec { inner: vec![] };
+    vec.inner.push((TestWithString {a: 3, b: 5, c: "foo".to_string()},
+      TestWithString {a: 7, b: 9, c: "bar".to_string()}));
+
+    let outer = Outer {
+      map: map,
+      vec: vec
+    };
+    {
+      let mut top_level_string_map = HashMap::<String, Outer>::new();
+      top_level_string_map.insert("top".to_string(), outer.clone());
+
+      let ser1 = serde_json::to_string(&top_level_string_map).unwrap();
+      let ser2 = top_level_string_map.to_json_map().unwrap();
+      assert_eq!(ser1, ser2);
+      let deser1: HashMap<String, Outer> = serde_json::from_str(&ser1).unwrap();
+      let deser2: HashMap<String, Outer> = json_to_map(&ser1).unwrap();
+      assert_eq!(top_level_string_map, deser1);
+      assert_eq!(top_level_string_map, deser2);
+    }
+    {
+      let mut top_level_struct_map = HashMap::<TestWithString, Outer>::new();
+      top_level_struct_map.insert(TestWithString { a: 10, b: 11, c: "bbq".to_string() }, outer.clone());
+
+      let ser = top_level_struct_map.to_json_map().unwrap();
+      let deser: HashMap<TestWithString, Outer> = json_to_map(&ser).unwrap();
+      assert_eq!(top_level_struct_map, deser);
+    }
+  }
   
   #[test]
   fn test_nested_struct_serde_1_level() {
