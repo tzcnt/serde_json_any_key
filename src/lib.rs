@@ -90,7 +90,7 @@ K: 'a + Serialize + Any,
 V: 'a + Serialize,
 <Self as IntoIterator>::IntoIter: 'a
 {
-  /// Serialize any `IntoIterator<(&K, &V)>` to a JSON map. This includes, but is not limited to, the following example types:  
+  /// Serialize any `IntoIterator<(&K,&V)>` to a JSON map. This includes, but is not limited to, the following example types:  
   /// `HashMap<K,V>`  
   /// return type of `HashMap<K,V>::iter()`  
   /// `BTreeMap<K,V>`  
@@ -186,7 +186,7 @@ impl<'a,K,V,I> Serialize for SerializeMapIterWrapper<'a,K,V,I> where
   }
 }
 
-/// Reverses to_json_map(), returning a `HashMap<K, V>`.
+/// Reverses to_json_map(), returning a `HashMap<K,V>`.
 ///
 /// # Examples
 /// ```
@@ -243,6 +243,7 @@ struct JsonToTupleIter<K,V> {
 }
 
 /// Reverses to_json_map(), returning an `Iterator<Item=Result<(K,V), serde_json::Error>>`.
+/// 
 /// Note that because JSON deserialization may fail for any individual element of the map,
 /// you will need to check for errors with each element returned from the iterator.
 ///
@@ -326,7 +327,7 @@ K: 'a + Serialize + Any,
 V: 'a + Serialize,
 <Self as IntoIterator>::IntoIter: 'a
 {
-  /// Serialize any `IntoIterator<&(K, V)>` to a JSON map. This includes, but is not limited to, the following example types:  
+  /// Serialize any `IntoIterator<&(K,V)>` to a JSON map. This includes, but is not limited to, the following example types:  
   /// `Vec<(K,V)>`  
   /// return type of `Vec<(K,V)>::iter()`  
   /// 
@@ -423,7 +424,7 @@ K: Serialize + Any,
 V: Serialize,
 <Self as IntoIterator>::IntoIter: 'a
 {
-  /// Serialize any `IntoIterator<(K, V)>` to a JSON map. This includes, but is not limited to, the following example types:  
+  /// Serialize any `IntoIterator<(K,V)>` to a JSON map. This includes, but is not limited to, the following example types:  
   /// `HashMap<K,V>`  
   /// return type of `HashMap<K,V>::into_iter()`  
   /// `Vec<(K,V)>`  
@@ -521,7 +522,7 @@ impl<K,V,I> Serialize for SerializeConsumingIterWrapper<K,V,I> where
   }
 }
 
-/// Reverses to_json_map(), returning a `Vec<(K, V)>`.
+/// Reverses to_json_map(), returning a `Vec<(K,V)>`.
 ///
 /// # Examples
 /// ```
@@ -574,12 +575,12 @@ mod serde_with_utils {
   use super::*;
   use serde::de::{MapAccess};
   use std::fmt;
-  pub struct MapIter<'de, A, K, V> {
+  pub struct MapIter<'de,A,K,V> {
     pub access: A,
-    marker: PhantomData<(&'de (), K, V)>,
+    marker: PhantomData<(&'de (),K,V)>,
   }
 
-  impl<'de, A, K, V> MapIter<'de, A, K, V> {
+  impl<'de,A,K,V> MapIter<'de,A,K,V> {
       pub fn new(access: A) -> Self
       where
           A: serde::de::MapAccess<'de>,
@@ -591,13 +592,13 @@ mod serde_with_utils {
       }
   }
 
-  impl<'de, A, K, V> Iterator for MapIter<'de, A, K, V>
+  impl<'de,A,K,V> Iterator for MapIter<'de,A,K,V>
   where
       A: serde::de::MapAccess<'de>,
       K: Deserialize<'de>,
       V: Deserialize<'de>,
   {
-      type Item = Result<(K, V), A::Error>;
+      type Item = Result<(K,V), A::Error>;
 
       fn next(&mut self) -> Option<Self::Item> {
           self.access.next_entry().transpose()
@@ -613,7 +614,7 @@ mod serde_with_utils {
 
   // any_key_map and any_key_vec use the same deserialize function
   #[inline]
-  pub fn deserialize<'d, D, C, K, V>(deserializer: D) -> Result<C, D::Error> where
+  pub fn deserialize<'d,D,C,K,V>(deserializer: D) -> Result<C,D::Error> where
     D: Deserializer<'d>,
     C: FromIterator<(K,V)> + Sized,
     for<'de> K: Deserialize<'de> + Any + 'd,
@@ -662,6 +663,8 @@ mod serde_with_utils {
 }
 
 /// Apply the attribute `#[serde(with = "any_key_map")]` to de/serialize structs with nested maps that contain non-string keys.
+/// 
+/// This attribute supports any type that impls `IntoIterator<Item=(&K,&V)>` and `FromIterator<(K,V)>`.
 /// ```
 /// use std::collections::HashMap;
 /// use serde::{Serialize, Deserialize};
@@ -699,7 +702,7 @@ pub mod any_key_map {
 use super::*;
 
   /// See docs for [any_key_map](index.html).
-  pub fn serialize<'s, S, C, K, V>(coll: C, serializer: S) -> Result<S::Ok, S::Error>
+  pub fn serialize<'s,S,C,K,V>(coll: C, serializer: S) -> Result<S::Ok,S::Error>
   where S: Serializer,
   C: IntoIterator<Item=(&'s K,&'s V)>,
   K: Serialize + Any + 's,
@@ -713,7 +716,7 @@ use super::*;
   }
 
   /// See docs for [any_key_map](index.html).
-  pub fn deserialize<'d, D, C, K, V>(deserializer: D) -> Result<C, D::Error> where
+  pub fn deserialize<'d,D,C,K,V>(deserializer: D) -> Result<C, D::Error> where
     D: Deserializer<'d>,
     C: FromIterator<(K,V)> + Sized,
     for<'de> K: Deserialize<'de> + Any + 'd,
@@ -728,6 +731,7 @@ use super::*;
 /// with nested `Vec<(K,V)>` that contain non-string keys.
 /// These Vecs will be serialized as JSON maps (as if they were a `HashMap<K,V>`).
 /// 
+/// This attribute supports any type that impls `IntoIterator<Item=&(K,V)>` and `FromIterator<(K,V)>`.
 /// ```
 /// use std::collections::HashMap;
 /// use serde::{Serialize, Deserialize};
@@ -783,7 +787,7 @@ pub mod any_key_vec {
   use super::*;
 
   /// See docs for [any_key_vec](index.html).
-  pub fn serialize<'s, S, C, K, V>(coll: C, serializer: S) -> Result<S::Ok, S::Error>
+  pub fn serialize<'s,S,C,K,V>(coll: C, serializer: S) -> Result<S::Ok, S::Error>
   where S: Serializer,
   C: IntoIterator<Item=&'s (K,V)>,
   K: Serialize + Any + 's,
@@ -797,7 +801,7 @@ pub mod any_key_vec {
   }
 
   /// See docs for [any_key_vec](index.html).
-  pub fn deserialize<'d, D, C, K, V>(deserializer: D) -> Result<C, D::Error> where
+  pub fn deserialize<'d,D,C,K,V>(deserializer: D) -> Result<C, D::Error> where
     D: Deserializer<'d>,
     C: FromIterator<(K,V)> + Sized,
     for<'de> K: Deserialize<'de> + Any + 'd,
