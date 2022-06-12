@@ -543,6 +543,39 @@ where
     }
 }
 
+/// Apply the attribute #[serde(with = "any_key_map")] to de/serialize structs with nested maps that contain non-string keys.
+/// ```
+/// use std::collections::HashMap;
+/// use serde::{Serialize, Deserialize};
+/// use serde_json::Error;
+/// use serde_json_any_key::*;
+/// 
+/// #[derive(Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash, Debug)]
+/// pub struct Test {
+///   pub a: i32,
+///   pub b: i32
+/// }
+/// 
+/// #[derive(Clone, Default, Serialize, Deserialize, PartialEq, Eq, Debug)]
+/// pub struct WithNestedMap {
+///   #[serde(with = "any_key_map")]
+///   pub struct_map: HashMap<Test, Test>,
+///   #[serde(with = "any_key_map")]
+///   pub int_map: HashMap<i32, String>
+/// }
+/// 
+/// fn try_main() -> Result<(), Error> {
+/// let mut data: WithNestedMap = Default::default();
+/// data.struct_map.insert(Test {a: 3, b: 5}, Test {a: 7, b: 9});
+/// data.int_map.insert(5, "foo".to_string());
+/// 
+/// let ser = serde_json::to_string(&data).unwrap();
+/// let deser: WithNestedMap = serde_json::from_str(&ser).unwrap();
+///
+/// assert_eq!(data, deser);
+/// Ok(()) }
+/// try_main().unwrap();
+/// ```
 pub mod any_key_map {
 use super::*;
 use serde::de::{MapAccess};
@@ -612,7 +645,60 @@ use std::fmt;
   }
 }
 
-#[allow(dead_code)]
+/// Apply the attribute #[serde(with = "any_key_vec")] to de/serialize structs
+/// with nested Vec<(K,V)> that contain non-string keys.
+/// These Vecs will be serialized as JSON maps (as if they were a HashMap<K,V>)
+/// 
+/// ```
+/// use std::collections::HashMap;
+/// use serde::{Serialize, Deserialize};
+/// use serde_json::Error;
+/// use serde_json_any_key::*;
+/// 
+/// #[derive(Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash, Debug)]
+/// pub struct Test {
+///   pub a: i32,
+///   pub b: i32
+/// }
+/// 
+/// #[derive(Clone, Default, Serialize, Deserialize, PartialEq, Eq, Debug)]
+/// pub struct WithNestedVec {
+///   #[serde(with = "any_key_vec")]
+///   pub structs: Vec<(Test, Test)>,
+///   #[serde(with = "any_key_vec")]
+///   pub ints: Vec<(i32, String)>
+/// }
+/// 
+/// #[derive(Clone, Default, Serialize, Deserialize, PartialEq, Eq, Debug)]
+/// pub struct WithNestedMap {
+///   #[serde(with = "any_key_map")]
+///   pub structs: HashMap<Test, Test>,
+///   #[serde(with = "any_key_map")]
+///   pub ints: HashMap<i32, String>
+/// }
+/// 
+/// fn try_main() -> Result<(), Error> {
+/// let mut vec_data: WithNestedVec = Default::default();
+/// vec_data.structs.push((Test {a: 3, b: 5}, Test {a: 7, b: 9}));
+/// vec_data.ints.push((5, "foo".to_string()));
+/// 
+/// let mut map_data: WithNestedMap = Default::default();
+/// map_data.structs.insert(Test {a: 3, b: 5}, Test {a: 7, b: 9});
+/// map_data.ints.insert(5, "foo".to_string());
+/// 
+/// // both produce the same JSON representation
+/// let ser_vec = serde_json::to_string(&vec_data).unwrap();
+/// let ser_map = serde_json::to_string(&map_data).unwrap();
+/// assert_eq!(ser_vec, ser_map);
+/// 
+/// // and can deserialize into each other
+/// let deser_vec: WithNestedVec = serde_json::from_str(&ser_map).unwrap();
+/// let deser_map: WithNestedMap = serde_json::from_str(&ser_vec).unwrap();
+/// assert_eq!(vec_data, deser_vec);
+/// assert_eq!(map_data, deser_map);
+/// Ok(()) }
+/// try_main().unwrap();
+/// ```
 pub mod any_key_vec {
   use super::*;
   use serde::de::{MapAccess};
