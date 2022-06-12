@@ -58,9 +58,6 @@ use std::marker::PhantomData;
 use serde::ser::{Serialize, Serializer, SerializeMap, Error};
 use serde::de::{Deserialize, Deserializer, Visitor};
 
-// I'm grateful that I was able to avoid doing it this way:
-// https://github.com/rust-lang/rust/issues/49601
-
 pub trait MapIterToJson<'a,K,V>: IntoIterator<Item=(&'a K,&'a V)> where
 Self: Sized,
 K: 'a + Serialize + Any,
@@ -113,9 +110,8 @@ V: 'a + Serialize,
   /// try_main().unwrap();
   /// ```
   fn to_json_map(self) -> Result<String, serde_json::Error> {
-    let mut iter = self.into_iter();
     serde_json::to_string(&SerializeMapIterWrapper {
-      iter: RefCell::new(&mut iter)
+      iter: RefCell::new(self.into_iter())
     })
   }
 }
@@ -127,14 +123,18 @@ V: 'a + Serialize,
 <Self as IntoIterator>::IntoIter: 'a
 { }
 
-struct SerializeMapIterWrapper<'i,'e,K,V>
+struct SerializeMapIterWrapper<'a,K,V,I> where
+I: Iterator<Item=(&'a K,&'a V)>,
+K: 'a,
+V: 'a
 {
-  pub iter: RefCell<&'i mut (dyn Iterator<Item=(&'e K,&'e V)>)>
+  pub iter: RefCell<I>
 }
 
-impl<'i,'e,K,V> Serialize for SerializeMapIterWrapper<'i,'e,K,V> where
+impl<'a,K,V,I> Serialize for SerializeMapIterWrapper<'a,K,V,I> where
+  I: Iterator<Item=(&'a K,&'a V)>,
   K: Serialize + Any,
-  V: Serialize
+  V: Serialize,
 {
   fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where
     S: Serializer
@@ -304,9 +304,8 @@ V: 'a + Serialize,
   /// try_main().unwrap();
   /// ```
   fn to_json_map(self) -> Result<String, serde_json::Error> {
-    let mut iter = self.into_iter();
     serde_json::to_string(&SerializeVecIterWrapper {
-      iter: RefCell::new(&mut iter)
+      iter: RefCell::new(self.into_iter())
     })
   }
 }
@@ -318,14 +317,18 @@ V: 'a + Serialize,
 <Self as IntoIterator>::IntoIter: 'a
 { }
 
-struct SerializeVecIterWrapper<'i,'e,K,V>
+struct SerializeVecIterWrapper<'a,K,V,I> where 
+I: Iterator<Item=&'a (K,V)>,
+K: 'a,
+V: 'a,
 {
-  pub iter: RefCell<&'i mut dyn Iterator<Item=&'e (K,V)>>
+  pub iter: RefCell<I>
 }
 
-impl<'i,'e,K,V> Serialize for SerializeVecIterWrapper<'i,'e,K,V> where
+impl<'a,K,V,I> Serialize for SerializeVecIterWrapper<'a,K,V,I> where
+  I: Iterator<Item=&'a (K,V)>,
   K: Serialize + Any,
-  V: Serialize
+  V: Serialize,
 {
   fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where
     S: Serializer
@@ -407,9 +410,8 @@ V: Serialize,
   /// try_main().unwrap();
   /// ```
   fn into_json_map(self) -> Result<String, serde_json::Error> {
-    let mut iter = self.into_iter();
     serde_json::to_string(&SerializeConsumingIterWrapper {
-      iter: RefCell::new(&mut iter)
+      iter: RefCell::new(self.into_iter())
     })
   }
 }
@@ -421,12 +423,14 @@ V: Serialize,
 <Self as IntoIterator>::IntoIter: 'a
 { }
 
-struct SerializeConsumingIterWrapper<'i,K,V>
+struct SerializeConsumingIterWrapper<K,V,I> where
+I: Iterator<Item=(K,V)>,
 {
-  pub iter: RefCell<&'i mut dyn Iterator<Item=(K,V)>>
+  pub iter: RefCell<I>
 }
 
-impl<'i,K,V> Serialize for SerializeConsumingIterWrapper<'i,K,V> where
+impl<K,V,I> Serialize for SerializeConsumingIterWrapper<K,V,I> where
+  I: Iterator<Item=(K,V)>,
   K: Serialize + Any,
   V: Serialize
 {
