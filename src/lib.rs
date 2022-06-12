@@ -237,7 +237,7 @@ for<'de> V: Deserialize<'de>
 }
 
 /// Return type of [json_to_iter()](fn.json_to_iter.html). It implements `Iterator<Item = Result<(K,V), serde_json::Error>>`. 
-pub struct JsonToTupleIter<K,V> {
+struct JsonToTupleIter<K,V> {
   iter: serde_json::map::IntoIter,
   kv: std::marker::PhantomData<(K,V)>,
 }
@@ -275,7 +275,10 @@ pub struct JsonToTupleIter<K,V> {
 /// Ok(()) }
 /// try_main().unwrap();
 /// ```
-pub fn json_to_iter<K,V>(str: &str) -> Result<JsonToTupleIter<K,V>, serde_json::Error> {
+pub fn json_to_iter<K,V>(str: &str) -> Result<impl Iterator<Item = Result<(K,V), serde_json::Error>>, serde_json::Error> where
+for<'de> K: Deserialize<'de> + Any,
+for<'de> V: Deserialize<'de>
+{
   let json_value = serde_json::from_str(&str)?;
   let json_map = match json_value {
     serde_json::Value::Object(map) => map,
