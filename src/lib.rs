@@ -65,7 +65,7 @@
 //!   map: map,
 //!   vec: vec,
 //! };
-//! // Now you can use the regular serde_json functions
+//! // You can use the usual serde_json functions now
 //! let ser_nested = serde_json::to_string(&nested).unwrap();
 //! let deser_nested: NestedTest = serde_json::from_str(&ser_nested).unwrap();
 //! assert_eq!(nested, deser_nested);
@@ -684,6 +684,7 @@ mod serde_with_utils {
 /// data.struct_map.insert(Test {a: 3, b: 5}, Test {a: 7, b: 9});
 /// data.int_map.insert(5, "foo".to_string());
 /// 
+/// // you can use the usual serde_json functions now
 /// let ser = serde_json::to_string(&data).unwrap();
 /// let deser: WithNestedMap = serde_json::from_str(&ser).unwrap();
 ///
@@ -761,7 +762,8 @@ use super::*;
 /// map_data.structs.insert(Test {a: 3, b: 5}, Test {a: 7, b: 9});
 /// map_data.ints.insert(5, "foo".to_string());
 /// 
-/// // both produce the same JSON representation
+/// // you can use the usual serde_json functions now
+/// // both structs produce the same JSON representation
 /// let ser_vec = serde_json::to_string(&vec_data).unwrap();
 /// let ser_map = serde_json::to_string(&map_data).unwrap();
 /// assert_eq!(ser_vec, ser_map);
