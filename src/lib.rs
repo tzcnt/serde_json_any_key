@@ -729,6 +729,95 @@ mod tests {
     pub b: i32
   }
 
+  #[derive(Clone, Deserialize, Serialize, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
+  pub struct TestWithString {
+    pub a: i32,
+    pub b: i32,
+    pub c: String
+  }
+  
+  #[test]
+  fn test_nested_struct_serde_1_level() {
+    #[derive(Clone, Deserialize, Serialize, PartialEq, Eq, Debug)]
+    struct SerdeWithMap {
+      #[serde(with = "any_key_map")]
+      pub inner: HashMap<TestWithString,TestWithString>
+    }
+    
+    #[derive(Clone, Deserialize, Serialize, PartialEq, Eq, Debug)]
+    struct SerdeWithVec {
+      #[serde(with = "any_key_vec")]
+      pub inner: Vec<(TestWithString,TestWithString)>
+    }
+
+    #[derive(Clone, Deserialize, Serialize, PartialEq, Eq, Debug)]
+    struct Outer {
+      pub map: SerdeWithMap,
+      pub vec: SerdeWithVec
+    }
+
+    let mut map = SerdeWithMap { inner: HashMap::new() };
+    map.inner.insert(TestWithString {a: 3, b: 5, c: "foo".to_string()},
+      TestWithString {a: 7, b: 9, c: "bar".to_string()});
+
+    let mut vec = SerdeWithVec { inner: vec![] };
+    vec.inner.push((TestWithString {a: 3, b: 5, c: "foo".to_string()},
+      TestWithString {a: 7, b: 9, c: "bar".to_string()}));
+
+    let outer = Outer {
+      map: map,
+      vec: vec
+    };
+
+    let serialized = serde_json::to_string(&outer).unwrap();
+    let deser: Outer = serde_json::from_str(&serialized).unwrap();
+    assert_eq!(outer, deser);
+  }
+
+  #[test]
+  fn test_nested_struct_serde_2_level() {
+    #[derive(Clone, Deserialize, Serialize, PartialEq, Eq, Debug)]
+    struct SerdeWithMap {
+      #[serde(with = "any_key_map")]
+      pub inner: HashMap<TestWithString,TestWithString>
+    }
+    
+    #[derive(Clone, Deserialize, Serialize, PartialEq, Eq, Debug, Hash)]
+    struct SerdeWithVec {
+      #[serde(with = "any_key_vec")]
+      pub inner: Vec<(TestWithString,TestWithString)>
+    }
+
+    #[derive(Clone, Deserialize, Serialize, PartialEq, Eq, Debug)]
+    struct Outer {
+      #[serde(with = "any_key_map")]
+      pub map: HashMap<SerdeWithVec, SerdeWithMap>,
+      #[serde(with = "any_key_vec")]
+      pub vec: Vec<(SerdeWithMap, SerdeWithVec)>
+    }
+
+    let mut map = SerdeWithMap { inner: HashMap::new() };
+    map.inner.insert(TestWithString {a: 3, b: 5, c: "foo".to_string()},
+      TestWithString {a: 7, b: 9, c: "bar".to_string()});
+
+    let mut vec = SerdeWithVec { inner: vec![] };
+    vec.inner.push((TestWithString {a: 3, b: 5, c: "foo".to_string()},
+      TestWithString {a: 7, b: 9, c: "bar".to_string()}));
+
+    let mut outer_map = HashMap::<SerdeWithVec, SerdeWithMap>::new();
+    outer_map.insert(vec.clone(), map.clone());
+    let mut outer_vec = Vec::<(SerdeWithMap, SerdeWithVec)>::new();
+    outer_vec.push((map, vec));
+    let outer = Outer {
+      map: outer_map,
+      vec: outer_vec
+    };
+
+    let serialized = serde_json::to_string(&outer).unwrap();
+    let deser: Outer = serde_json::from_str(&serialized).unwrap();
+    assert_eq!(outer, deser);
+  }
+
   #[test]
   fn test_struct_serde_with_map() {
     #[derive(Clone, Deserialize, Serialize, PartialEq, Eq, Debug)]
