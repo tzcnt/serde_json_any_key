@@ -676,9 +676,10 @@ pub mod any_key_vec {
         .map(C::from_iter)
   }
 
-  // This implementation would be more efficient (doesn't have an intermediate Vec)
+  // This implementation would be more efficient (doesn't create an intermediate Vec)
   // But then #[derive(Deserialize)] can't pick between Extend<(K,V)> and Extend<(&K,&V)>
-  // Perhaps with future language features, it will be possible to help the compiler pick the first one
+  // User would be required to specify all template types in their #[derive(Deserialize<>)]
+  // Perhaps with future language features, it will be possible to make this ergonomic
 
   // pub fn deserialize<'d, D, C, K, V>(deserializer: D) -> Result<C, D::Error> where
   //   D: Deserializer<'d>,
