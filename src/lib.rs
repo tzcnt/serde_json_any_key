@@ -1,10 +1,14 @@
-//! ##### TLDR: serde_json will not serialize JSON maps where the key is not a string, e.g. `i32` or `struct` types.  
-//! ##### This crate simplifies the process of converting the key to/from a string that serde_json is happy with.  
+//! ##### Why? : serde_json will not serialize JSON maps where the key is not a string, such as `i32` or `struct` types.  
+//! ##### What?: This crate simplifies the process of converting the key to/from a string that serde_json is happy with.  
 //! 
-//! Serializing is as simple as calling `.to_json_map()` on your data. It's implemented for both [Map-like](trait.MapIterToJson.html#method.to_json_map) and [Vec-like](trait.VecIterToJson.html#method.to_json_map) structures.  
-//! There is also a version that consumes/moves out of the data structure: [.into_json_map()](trait.ConsumingIterToJson.html#method.into_json_map).
+//! To serialize a collection, simply call `.to_json_map()`. It's implemented for both [Map-like](trait.MapIterToJson.html#method.to_json_map) and [Vec-like](trait.VecIterToJson.html#method.to_json_map) structures.  
+//! There is also a version that consumes/moves out of the collection: [.into_json_map()](trait.ConsumingIterToJson.html#method.into_json_map).
 //! 
-//! You can deserialize into a [HashMap](fn.json_to_map.html) or [Vec of tuples](fn.json_to_vec.html), and the string key will be automatically converted back into the native type.
+//! You can deserialize into a [HashMap](fn.json_to_map.html), [Vec of tuples](fn.json_to_vec.html), or [any other collection via Iterator](fn.json_to_iter.html) and the string key will be automatically converted back into the native type.
+//! 
+//! Serialization of structs with nested maps is supported via the following attributes:  
+//! [#[serde(with = "any_key_map")]](any_key_map/index.html)  
+//! [#[serde(with = "any_key_vec")]](any_key_vec/index.html)
 //! ```
 //! use std::collections::HashMap;
 //! use serde::{Serialize, Deserialize};
@@ -44,6 +48,26 @@
 //! let deser_vec: Vec<(Test, Test)> = json_to_vec(&ser1).unwrap();
 //! assert_eq!(map, deser_map);
 //! assert_eq!(vec, deser_vec);
+//! 
+//! // Serialization of structs with nested maps is supported via the following attributes:
+//! // #[serde(with = "any_key_vec")]
+//! // #[serde(with = "any_key_map")]
+//! 
+//! // Both the "map" and "vec" fields will serialize identically - as a JSON map
+//! #[derive(Clone, Deserialize, Serialize, PartialEq, Eq, Debug)]
+//! pub struct NestedTest {
+//!   #[serde(with = "any_key_map")]
+//!   map: HashMap<Test, Test>,
+//!   #[serde(with = "any_key_vec")]
+//!   vec: Vec<(Test, Test)>
+//! }
+//! let nested = NestedTest {
+//!   map: map,
+//!   vec: vec,
+//! };
+//! let ser_nested = serde_json::to_string(&nested).unwrap();
+//! let deser_nested: NestedTest = serde_json::from_str(&ser_nested).unwrap();
+//! assert_eq!(nested, deser_nested);
 //! Ok(()) }
 //! try_main().unwrap();
 //! ```
@@ -58,6 +82,7 @@ use std::marker::PhantomData;
 use serde::ser::{Serialize, Serializer, SerializeMap, Error};
 use serde::de::{Deserialize, Deserializer, Visitor};
 
+/// Blanket impl [to_json_map()](trait.MapIterToJson.html#method.to_json_map) for all `IntoIterator<Item=(&K,&V)>` types.
 pub trait MapIterToJson<'a,K,V>: IntoIterator<Item=(&'a K,&'a V)> where
 Self: Sized,
 K: 'a + Serialize + Any,
@@ -160,7 +185,7 @@ impl<'a,K,V,I> Serialize for SerializeMapIterWrapper<'a,K,V,I> where
   }
 }
 
-/// Reverses to_json_map(), returning a HashMap<K, V>.
+/// Reverses to_json_map(), returning a `HashMap<K, V>`.
 ///
 /// # Examples
 /// ```
@@ -210,12 +235,45 @@ for<'de> V: Deserialize<'de>
   Ok(map)
 }
 
+/// Return type of [json_to_iter()](fn.json_to_iter.html). It implements `Iterator<Item = Result<(K,V), serde_json::Error>>`. 
 pub struct JsonToTupleIter<K,V> {
   iter: serde_json::map::IntoIter,
-  k: std::marker::PhantomData<K>,
-  v: std::marker::PhantomData<V>
+  kv: std::marker::PhantomData<(K,V)>,
 }
 
+/// Reverses to_json_map(), returning an `Iterator<Item=Result<(K,V), serde_json::Error>>`.
+/// Note that because JSON deserialization may fail for any individual element of the map,
+/// you will need to check for errors with each element returned from the iterator.
+///
+/// # Examples
+/// ```
+/// use std::collections::{BTreeMap, HashMap};
+/// use serde::{Serialize, Deserialize};
+/// use serde_json::Error;
+/// use serde_json_any_key::*;
+/// 
+/// #[derive(Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash, Debug, Ord, PartialOrd)]
+/// pub struct Test {
+///   pub a: i32,
+///   pub b: i32
+/// }
+/// 
+/// fn try_main() -> Result<(), Error> {
+/// let mut map = HashMap::<Test, Test>::new();
+/// map.insert(Test {a: 3, b: 5}, Test {a: 7, b: 9});
+/// let ser = map.to_json_map().unwrap();
+/// 
+/// // Contruct any type of collection using from_iter(), collect(), or extend()
+/// let deser1: HashMap<Test, Test> = HashMap::from_iter(json_to_iter::<Test,Test>(&ser).unwrap().map(|x| x.unwrap()));
+/// assert_eq!(map, deser1);
+/// 
+/// let deser2: BTreeMap<Test, Test> = json_to_iter::<Test,Test>(&ser).unwrap().map(|x| x.unwrap()).collect();
+/// 
+/// let mut deser3: Vec<(Test, Test)> = Vec::new();
+/// deser3.extend(json_to_iter::<Test,Test>(&ser).unwrap().map(|x| x.unwrap()));
+/// Ok(()) }
+/// try_main().unwrap();
+/// ```
 pub fn json_to_iter<K,V>(str: &str) -> Result<JsonToTupleIter<K,V>, serde_json::Error> {
   let json_value = serde_json::from_str(&str)?;
   let json_map = match json_value {
@@ -224,8 +282,7 @@ pub fn json_to_iter<K,V>(str: &str) -> Result<JsonToTupleIter<K,V>, serde_json::
   };
   Ok(JsonToTupleIter {
     iter: json_map.into_iter(),
-    k: std::marker::PhantomData,
-    v: std::marker::PhantomData
+    kv: std::marker::PhantomData
   })
 }
 
@@ -258,6 +315,7 @@ for<'de> V: Deserialize<'de>
   }
 }
 
+/// Blanket impl [to_json_map()](trait.VecIterToJson.html#method.to_json_map) for all `IntoIterator<Item=&(K,V)>` types.
 pub trait VecIterToJson<'a,K,V>: IntoIterator<Item=&'a (K,V)> where
 Self: Sized,
 K: 'a + Serialize + Any,
@@ -354,6 +412,7 @@ impl<'a,K,V,I> Serialize for SerializeVecIterWrapper<'a,K,V,I> where
   }
 }
 
+/// Blanket impl [into_json_map()](trait.ConsumingIterToJson.html#method.into_json_map) for all `IntoIterator<Item=(K,V)>` types.
 pub trait ConsumingIterToJson<'a,K,V>: IntoIterator<Item=(K,V)> where
 Self: Sized,
 K: Serialize + Any,
@@ -458,7 +517,7 @@ impl<K,V,I> Serialize for SerializeConsumingIterWrapper<K,V,I> where
   }
 }
 
-/// Reverses to_json_map(), returning a Vec<(K, V)>.
+/// Reverses to_json_map(), returning a `Vec<(K, V)>`.
 ///
 /// # Examples
 /// ```
@@ -543,7 +602,7 @@ where
     }
 }
 
-/// Apply the attribute #[serde(with = "any_key_map")] to de/serialize structs with nested maps that contain non-string keys.
+/// Apply the attribute `#[serde(with = "any_key_map")]` to de/serialize structs with nested maps that contain non-string keys.
 /// ```
 /// use std::collections::HashMap;
 /// use serde::{Serialize, Deserialize};
@@ -581,6 +640,7 @@ use super::*;
 use serde::de::{MapAccess};
 use std::fmt;
 
+  /// See docs for [any_key_map](index.html).
   pub fn serialize<'s, S, C, K, V>(coll: C, serializer: S) -> Result<S::Ok, S::Error>
   where S: Serializer,
   C: IntoIterator<Item=(&'s K,&'s V)>,
@@ -594,6 +654,7 @@ use std::fmt;
     wrap.serialize(serializer)
   }
 
+  /// See docs for [any_key_map](index.html).
   pub fn deserialize<'d, D, C, K, V>(deserializer: D) -> Result<C, D::Error> where
     D: Deserializer<'d>,
     C: FromIterator<(K,V)> + Sized,
@@ -645,9 +706,9 @@ use std::fmt;
   }
 }
 
-/// Apply the attribute #[serde(with = "any_key_vec")] to de/serialize structs
-/// with nested Vec<(K,V)> that contain non-string keys.
-/// These Vecs will be serialized as JSON maps (as if they were a HashMap<K,V>)
+/// Apply the attribute `#[serde(with = "any_key_vec")]` to de/serialize structs
+/// with nested `Vec<(K,V)>` that contain non-string keys.
+/// These Vecs will be serialized as JSON maps (as if they were a `HashMap<K,V>`).
 /// 
 /// ```
 /// use std::collections::HashMap;
@@ -703,6 +764,8 @@ pub mod any_key_vec {
   use super::*;
   use serde::de::{MapAccess};
   use std::fmt;
+
+  /// See docs for [any_key_vec](index.html).
   pub fn serialize<'s, S, C, K, V>(coll: C, serializer: S) -> Result<S::Ok, S::Error>
   where S: Serializer,
   C: IntoIterator<Item=&'s (K,V)>,
@@ -716,6 +779,7 @@ pub mod any_key_vec {
     wrap.serialize(serializer)
   }
 
+  /// See docs for [any_key_vec](index.html).
   pub fn deserialize<'d, D, C, K, V>(deserializer: D) -> Result<C, D::Error> where
     D: Deserializer<'d>,
     C: FromIterator<(K,V)> + Sized,
