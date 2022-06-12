@@ -502,6 +502,43 @@ for<'de> V: Deserialize<'de>
   Ok(vec)
 }
 
+pub(crate) struct MapIter<'de, A, K, V> {
+  pub(crate) access: A,
+  marker: PhantomData<(&'de (), K, V)>,
+}
+
+impl<'de, A, K, V> MapIter<'de, A, K, V> {
+    pub(crate) fn new(access: A) -> Self
+    where
+        A: serde::de::MapAccess<'de>,
+    {
+        Self {
+            access,
+            marker: PhantomData,
+        }
+    }
+}
+
+impl<'de, A, K, V> Iterator for MapIter<'de, A, K, V>
+where
+    A: serde::de::MapAccess<'de>,
+    K: Deserialize<'de>,
+    V: Deserialize<'de>,
+{
+    type Item = Result<(K, V), A::Error>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.access.next_entry().transpose()
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        match self.access.size_hint() {
+            Some(size) => (size, Some(size)),
+            None => (0, None),
+        }
+    }
+}
+
 pub mod any_key_map {
 use super::*;
 use serde::de::{MapAccess};
@@ -518,43 +555,6 @@ use std::fmt;
       iter: RefCell::new(&mut iter),
     };
     wrap.serialize(serializer)
-  }
-
-  pub(crate) struct MapIter<'de, A, K, V> {
-    pub(crate) access: A,
-    marker: PhantomData<(&'de (), K, V)>,
-  }
-
-  impl<'de, A, K, V> MapIter<'de, A, K, V> {
-      pub(crate) fn new(access: A) -> Self
-      where
-          A: MapAccess<'de>,
-      {
-          Self {
-              access,
-              marker: PhantomData,
-          }
-      }
-  }
-
-  impl<'de, A, K, V> Iterator for MapIter<'de, A, K, V>
-  where
-      A: MapAccess<'de>,
-      K: Deserialize<'de>,
-      V: Deserialize<'de>,
-  {
-      type Item = Result<(K, V), A::Error>;
-
-      fn next(&mut self) -> Option<Self::Item> {
-          self.access.next_entry().transpose()
-      }
-
-      fn size_hint(&self) -> (usize, Option<usize>) {
-          match self.access.size_hint() {
-              Some(size) => (size, Some(size)),
-              None => (0, None),
-          }
-      }
   }
 
   pub fn deserialize<'d, D, C, K, V>(deserializer: D) -> Result<C, D::Error> where
@@ -626,45 +626,6 @@ pub mod any_key_vec {
     wrap.serialize(serializer)
   }
 
-  pub(crate) struct MapIter<'de, A, K, V> {
-    pub(crate) access: A,
-    marker: PhantomData<(&'de (), K, V)>,
-  }
-
-  impl<'de, A, K, V> MapIter<'de, A, K, V> {
-      pub(crate) fn new(access: A) -> Self
-      where
-          A: MapAccess<'de>,
-      {
-          Self {
-              access,
-              marker: PhantomData,
-          }
-      }
-  }
-
-  impl<'de, A, K, V> Iterator for MapIter<'de, A, K, V>
-  where
-      A: MapAccess<'de>,
-      K: Deserialize<'de>,
-      V: Deserialize<'de>,
-  {
-      type Item = Result<(K, V), A::Error>;
-
-      fn next(&mut self) -> Option<Self::Item> {
-          let ret = self.access.next_entry().transpose();
-          let y = ret;
-          return y;
-      }
-
-      fn size_hint(&self) -> (usize, Option<usize>) {
-          match self.access.size_hint() {
-              Some(size) => (size, Some(size)),
-              None => (0, None),
-          }
-      }
-  }
-
   pub fn deserialize<'d, D, C, K, V>(deserializer: D) -> Result<C, D::Error> where
     D: Deserializer<'d>,
     C: FromIterator<(K,V)> + Sized,
@@ -702,7 +663,6 @@ pub mod any_key_vec {
                     }
                   };
                   Ok((key_obj, value.1))
-                    //value.parse::<S>().map_err(Error::custom)
                 })
               }) {
                 vec.push(item?);
