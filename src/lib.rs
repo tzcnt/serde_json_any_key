@@ -168,6 +168,7 @@ impl<'a,K,V,I> Serialize for SerializeMapIterWrapper<'a,K,V,I> where
     let mut ser_map = serializer.serialize_map(None)?;
     let mut iter = self.iter.borrow_mut();
     // handle strings specially so they don't get escaped and wrapped inside another string
+    // compiler seems to be able to optimize this branch away statically
     if TypeId::of::<K>() == TypeId::of::<String>() {
       while let Some((k, v)) = iter.next() {
         let s = (k as &dyn Any).downcast_ref::<String>().ok_or(S::Error::custom("Failed to serialize String as string"))?;
@@ -220,6 +221,7 @@ for<'de> V: Deserialize<'de>
   let v: serde_json::Value = serde_json::from_str(&str)?;
   let o = v.as_object().ok_or(serde_json::Error::custom("Value is not a JSON map"))?;
   // handle strings specially as they are not objects
+  // compiler seems to be able to optimize this branch away statically
   if TypeId::of::<K>() == TypeId::of::<String>() {
     for (key, val) in o.iter() {
       let key_obj: K = <K as Deserialize>::deserialize(serde_json::Value::from(key.as_str()))?;
@@ -399,6 +401,7 @@ impl<'a,K,V,I> Serialize for SerializeVecIterWrapper<'a,K,V,I> where
     let mut ser_map = serializer.serialize_map(None)?;
     let mut iter = self.iter.borrow_mut();
     // handle strings specially so they don't get escaped and wrapped inside another string
+    // compiler seems to be able to optimize this branch away statically
     if TypeId::of::<K>() == TypeId::of::<String>() {
       while let Some((k, v)) = iter.next() {
         let s = (k as &dyn Any).downcast_ref::<String>().ok_or(S::Error::custom("Failed to serialize String as string"))?;
@@ -504,6 +507,7 @@ impl<K,V,I> Serialize for SerializeConsumingIterWrapper<K,V,I> where
     let mut ser_map = serializer.serialize_map(None)?;
     let mut iter = self.iter.borrow_mut();
     // handle strings specially so they don't get escaped and wrapped inside another string
+    // compiler seems to be able to optimize this branch away statically
     if TypeId::of::<K>() == TypeId::of::<String>() {
       while let Some((k, v)) = iter.next() {
         let s = (&k as &dyn Any).downcast_ref::<String>().ok_or(S::Error::custom("Failed to serialize String as string"))?;
@@ -554,6 +558,7 @@ for<'de> V: Deserialize<'de>
   let v: serde_json::Value = serde_json::from_str(&str)?;
   let o = v.as_object().ok_or(serde_json::Error::custom("Value is not a JSON map"))?;
   // handle strings specially as they are not objects
+  // compiler seems to be able to optimize this branch away statically
   if TypeId::of::<K>() == TypeId::of::<String>() {
     for (key, val) in o.iter() {
       let key_obj: K = <K as Deserialize>::deserialize(serde_json::Value::from(key.as_str()))?;
