@@ -15,73 +15,59 @@ use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
 use serde_json_any_key::*;
 
-#[derive(Clone, Copy, Deserialize, Serialize, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, Deserialize, Serialize, PartialEq, Eq, Hash, Debug)]
 pub struct Test {
   pub a: i32,
   pub b: i32
 }
 
 fn main() {
-  let mut map = HashMap::<Test, Test>::new();
-  map.insert(Test {a: 3, b: 5}, Test {a: 7, b: 9});
+ // Create a map with a struct key
+ let mut map = HashMap::<Test, Test>::new();
+ map.insert(Test {a: 3, b: 5}, Test {a: 7, b: 9});
+ 
+ // Regular serde_json cannot serialize this map
+ let fail = serde_json::to_string(&map);
+ assert_eq!(fail.err().unwrap().to_string(), "key must be a string");
+ 
+ // Use this crate's utility function
+ // Outputs {"{\"a\":3,\"b\":5}":{"a":7,"b":9}}
+ let ser1 = map.to_json_map().unwrap();
+ assert_eq!(ser1, r#"{"{\"a\":3,\"b\":5}":{"a":7,"b":9}}"#);
+ 
+ // You can also serialize a Vec or slice of tuples to a JSON map
+ let mut vec = Vec::<(Test, Test)>::new();
+ vec.push((Test {a: 3, b: 5}, Test {a: 7, b: 9}));
+ let ser2 = vec.to_json_map().unwrap();
 
-  // The problem this crate aims to solve
-  // Fails with error: key must be a string
-  let serialized = serde_json::to_string(&map);
-  match serialized {
-    Ok(serialized) => { println!("{}", serialized); }
-    Err(e) => { println!("Error as expected: {}", e); }
-  }
-
-  // Long winded workaround that copies the map
-  // Prints {"{\"a\":3,\"b\":5}":{"a":7,"b":9}}
-  let string_map: HashMap<String, Test> = map.iter().map(|(k, &v)| (serde_json::to_string(k).unwrap(), v)).collect();
-  let serialized = serde_json::to_string(&string_map).unwrap();
-  println!("{}", serialized);
-  
-  // Use this crate's utility function - elements are serialized lazily
-  // Same output
-  let serialized = serde_json_any_key::map_to_json(&map).unwrap();
-  println!("{}", serialized);
-
-  // Utility function also exists for vec of tuples
-  // Same output
-  let vec = vec![(Test {a: 3, b: 5}, Test {a: 7, b: 9})];
-  let serialized = serde_json_any_key::vec_to_json(&vec).unwrap();
-  println!("{}", serialized);
-
-  // Also supports any other data type that generates an Iter<&(K,V)> or Iter<(&K, &V)>
-  // Same output
-  let mut btree = std::collections::BTreeMap::<Test, Test>::new();
-  btree.insert(Test {a: 3, b: 5}, Test {a: 7, b: 9});
-  let serialized = serde_json_any_key::map_iter_to_json(&mut btree.iter()).unwrap();
-  println!("{}", serialized);
-
-  // Also supports deserialization, back to HashMap or Vec
-  let deserialized_map: HashMap<Test,Test> = serde_json_any_key::json_to_map(&serialized).unwrap();
-  assert_eq!(map, deserialized_map);
-  let deserialized_vec: Vec<(Test,Test)> = serde_json_any_key::json_to_vec(&serialized).unwrap();
-  assert_eq!(vec, deserialized_vec);
-
-  // If K already is a String, it will behave identically to serde_json.
-  let mut string_map: HashMap<String, i32> = HashMap::new();
-  string_map.insert("foo".to_owned(), 1234i32);
-  let ser1 = serde_json::to_string(&string_map).unwrap();
-  let ser2 = serde_json_any_key::map_to_json(&string_map).unwrap();
-  println!("{}", ser2);
-  assert_eq!(ser1, ser2);
-  let deser1: HashMap<String, i32> = serde_json::from_str(&ser1).unwrap();
-  let deser2: HashMap<String, i32> = serde_json_any_key::json_to_map(&ser1).unwrap();
-  assert_eq!(deser1, deser2);
+ // Output is identical in either case
+ assert_eq!(ser1, ser2);
+ 
+ // And can be deserialized to either type
+ let deser_map: HashMap<Test, Test> = json_to_map(&ser2).unwrap();
+ let deser_vec: Vec<(Test, Test)> = json_to_vec(&ser1).unwrap();
+ assert_eq!(map, deser_map);
+ assert_eq!(vec, deser_vec);
+ 
+ // Serialization of structs with nested maps is supported via the following attributes:
+ // #[serde(with = "any_key_vec")]
+ // #[serde(with = "any_key_map")]
+ 
+ // Both the "map" and "vec" fields will serialize identically - as a JSON map
+ #[derive(Clone, Deserialize, Serialize, PartialEq, Eq, Debug)]
+ pub struct NestedTest {
+   #[serde(with = "any_key_map")]
+   map: HashMap<Test, Test>,
+   #[serde(with = "any_key_vec")]
+   vec: Vec<(Test, Test)>
+ }
+ let nested = NestedTest {
+   map: map,
+   vec: vec,
+ };
+ // You can use the usual serde_json functions now
+ let ser_nested = serde_json::to_string(&nested).unwrap();
+ let deser_nested: NestedTest = serde_json::from_str(&ser_nested).unwrap();
+ assert_eq!(nested, deser_nested);
 }
-```
-
-Output:
-```
-Error as expected: key must be a string
-{"{\"a\":3,\"b\":5}":{"a":7,"b":9}}
-{"{\"a\":3,\"b\":5}":{"a":7,"b":9}}
-{"{\"a\":3,\"b\":5}":{"a":7,"b":9}}
-{"{\"a\":3,\"b\":5}":{"a":7,"b":9}}
-{"foo":1234}
 ```
