@@ -7,7 +7,7 @@ If K already is a String, it will behave identically to serde_json.
 Serialization is implemented for any type that implements IntoIterator<Item=(K,V)>, IntoIterator<Item=&(K,V)>, or IntoIterator<Item=(&K,&V)>.  
 Deserialization is implemented for any type that implements FromIterator<(K,V)>.
 
-Serialization of structs with nested maps is supported via the following attributes:  
+De/serialization of structs with nested maps is supported via the following attributes:  
 #[serde(with = "any_key_vec")]  
 #[serde(with = "any_key_map")]
 
@@ -55,7 +55,7 @@ fn main() {
  assert_eq!(map, deser_map);
  assert_eq!(vec, deser_vec);
  
- // Serialization of structs with nested maps is supported via the following attributes:
+ // De/serialization of structs with nested maps is supported via the following attributes:
  // #[serde(with = "any_key_vec")]
  // #[serde(with = "any_key_map")]
  
