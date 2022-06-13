@@ -1,10 +1,10 @@
 [package]
 name = "serde_json_any_key"
-version = "1.1.0"
+version = "2.0.0"
 edition = "2021"
 license = "Unlicense"
 repository = "https://github.com/tzcnt/serde_json_any_key/"
-description = "Workaround for \"key must be a string\" error with serde_json. Serialize any HashMap<K,V>, Vec<K,V>, Iter<(&K,&V)>, or Iter<&(K,V)> as a JSON map."
+description = "Workaround for \"key must be a string\" error with serde_json. De/serialize any HashMap<K,V>, Vec<K,V>, Iter<(&K,&V)>, or Iter<&(K,V)> as a JSON map."
 keywords = ["serde_json", "hashmap", "iterator", "struct", "key"]
 categories = ["encoding"]
 exclude = ["main.rs", ".vscode/"]
