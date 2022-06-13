@@ -1,4 +1,5 @@
 ## serde_json_any_key
+#### [View the docs on docs.rs](https://docs.rs/serde_json_any_key/latest/serde_json_any_key/)  
 Workaround for \"key must be a string\" error with serde_json. De/serialize any HashMap<K,V>, Vec<(K,V)>, Iter<(&K,&V)>, or Iter<&(K,V)> as a JSON map.
 
 The output will be the same as if you manually serialized K to a String.
