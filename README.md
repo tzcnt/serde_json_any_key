@@ -1,10 +1,16 @@
 ## serde_json_any_key
-Workaround for \"key must be a string\" error with serde_json. Serialize any HashMap<K,V>, Vec<(K,V)>, Iter<(&K,&V)>, or Iter<&(K,V)> as a JSON map.
+Workaround for \"key must be a string\" error with serde_json. De/serialize any HashMap<K,V>, Vec<(K,V)>, Iter<(&K,&V)>, or Iter<&(K,V)> as a JSON map.
 
 The output will be the same as if you manually serialized K to a String.
 If K already is a String, it will behave identically to serde_json.
 
-Also supports deserialization to HashMap<K,V> or Vec<(K,V)>.
+Serialization is implemented for any type that implements IntoIterator<Item=(K,V)>, IntoIterator<Item=&(K,V)>, or IntoIterator<Item=(&K,&V)>.  
+Deserialization is implemented for any type that implements FromIterator<(K,V)>.
+
+Serialization of structs with nested maps is supported via the following attributes:  
+#[serde(with = "any_key_vec")]  
+#[serde(with = "any_key_map")]
+
 
 This crate is implemented purely using safe, stable Rust.
 
