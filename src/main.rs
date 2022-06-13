@@ -1,5 +1,4 @@
 // Examples of how to use the library
-
 use std::collections::{BTreeMap, HashMap};
 use serde::{Serialize, Deserialize};
 use serde_json_any_key::*;
@@ -9,7 +8,6 @@ pub struct Test {
   pub a: i32,
   pub b: i32
 }
-
 
 #[derive(Clone, Deserialize, Serialize, PartialEq, Eq, Debug)]
 pub struct NestedTest {
@@ -94,7 +92,7 @@ fn main() {
   let deser2: HashMap<String, i32> = serde_json_any_key::json_to_map(&ser1).unwrap();
   assert_eq!(deser1, deser2);
 
-  // Serialization of structs with nested maps is supported via the following annotations:
+  // De/serialization of structs with nested maps is supported via the following annotations:
   // #[serde(with = "any_key_vec")]
   // #[serde(with = "any_key_map")]
   let mut nested = NestedTest {
