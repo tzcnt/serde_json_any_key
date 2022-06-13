@@ -301,6 +301,8 @@ for<'de> V: Deserialize<'de>
   fn next(&mut self) -> Option<Self::Item> {
     match self.iter.next() {
       Some(a) => {
+        // handle strings specially as they are not objects
+        // compiler seems to be able to optimize this branch away statically
         let key_obj: K = match TypeId::of::<K>() == TypeId::of::<String>() {
           true => match <K as Deserialize>::deserialize(serde_json::Value::from(a.0)) {
             Ok(k) => k,
@@ -646,6 +648,8 @@ mod serde_with_utils {
           let coll: Result<C, A::Error> = MapIter::<'d, A, String, V>::new(seq)
             .map(|res| {
               res.and_then(|value: (String,V)| {
+                // handle strings specially as they are not objects
+                // compiler seems to be able to optimize this branch away statically
                 let key_obj: K = match TypeId::of::<K>() == TypeId::of::<String>() {
                   true => match <K as Deserialize>::deserialize(serde_json::Value::from(value.0)) {
                     Ok(k) => k,
