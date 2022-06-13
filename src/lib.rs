@@ -27,7 +27,7 @@
 //! let mut map = HashMap::<Test, Test>::new();
 //! map.insert(Test {a: 3, b: 5}, Test {a: 7, b: 9});
 //! 
-//! // Naive serde_json cannot serialize this map
+//! // Regular serde_json cannot serialize this map
 //! let fail = serde_json::to_string(&map);
 //! assert_eq!(fail.err().unwrap().to_string(), "key must be a string");
 //! 
@@ -118,7 +118,7 @@ V: 'a + Serialize,
   /// let mut map = HashMap::<Test, Test>::new();
   /// map.insert(Test {a: 3, b: 5}, Test {a: 7, b: 9});
   /// 
-  /// // Naive serde_json cannot serialize this map.
+  /// // Regular serde_json cannot serialize this map.
   /// let fail = serde_json::to_string(&map);
   /// assert_eq!(fail.err().unwrap().to_string(), "key must be a string");
   /// 
@@ -357,7 +357,7 @@ V: 'a + Serialize,
   /// let mut vec = Vec::<(Test, Test)>::new();
   /// vec.push((Test {a: 3, b: 5}, Test {a: 7, b: 9}));
   /// 
-  /// // Naive serde_json will serialize this as an array, not a map.
+  /// // Regular serde_json will serialize this as an array, not a map.
   /// // Outputs [[{"a":3,"b":5},{"a":7,"b":9}]]
   /// let ser1 = serde_json::to_string(&vec).unwrap();
   /// assert_eq!(ser1, "[[{\"a\":3,\"b\":5},{\"a\":7,\"b\":9}]]");
