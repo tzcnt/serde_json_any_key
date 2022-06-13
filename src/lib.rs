@@ -6,7 +6,7 @@
 //! 
 //! You can deserialize into a [HashMap](fn.json_to_map.html), [Vec of tuples](fn.json_to_vec.html), or [any other collection via Iterator](fn.json_to_iter.html) and the string key will be automatically converted back into the native type.
 //! 
-//! Serialization of structs with nested maps is supported via the following attributes:  
+//! De/serialization of structs with nested maps is supported via the following attributes:  
 //! [#[serde(with = "any_key_map")]](any_key_map/index.html)  
 //! [#[serde(with = "any_key_vec")]](any_key_vec/index.html)
 //! ```
@@ -49,7 +49,7 @@
 //! assert_eq!(map, deser_map);
 //! assert_eq!(vec, deser_vec);
 //! 
-//! // Serialization of structs with nested maps is supported via the following attributes:
+//! // De/serialization of structs with nested maps is supported via the following attributes:
 //! // #[serde(with = "any_key_vec")]
 //! // #[serde(with = "any_key_map")]
 //! 
