@@ -7,7 +7,7 @@
     {
       "type": "lldb",
       "request": "launch",
-      "name": "Debug executable 'serde_json_any_key'",
+      "name": "Debug executable 'serde_json_any_key' (Debug)",
       "cargo": {
         "args": [
           "build",
@@ -25,11 +25,48 @@
     {
       "type": "lldb",
       "request": "launch",
-      "name": "Debug unit tests in executable 'serde_json_any_key'",
+      "name": "Debug executable 'serde_json_any_key' (Release)",
+      "cargo": {
+        "args": [
+          "build",
+          "--bin=serde_json_any_key",
+          "--package=serde_json_any_key",
+          "--profile=release"
+        ],
+        "filter": {
+          "name": "serde_json_any_key",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in 'serde_json_any_key' (Debug)",
       "cargo": {
         "args": [
           "test",
           "--package=serde_json_any_key"
+        ],
+        "filter": {
+          "name": "serde_json_any_key",
+          "kind": "lib"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in 'serde_json_any_key' (Release)",
+      "cargo": {
+        "args": [
+          "test",
+          "--package=serde_json_any_key",
+          "--profile=release"
         ],
         "filter": {
           "name": "serde_json_any_key",
