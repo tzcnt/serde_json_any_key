@@ -12,6 +12,7 @@ De/serialization of structs with nested maps is supported via the following attr
 #[serde(with = "any_key_vec")]  
 #[serde(with = "any_key_map")]
 
+All de/serialization is done in a single pass, with no intermediate collection.
 
 This crate is implemented purely using safe, stable Rust.
 
