@@ -65,7 +65,7 @@ K: Serialize + Any + 's,
 V: Serialize + 's
 {
   let mut iter = coll.into_iter();
-  let wrap = SerializeVecIterWrapper {
+  let wrap = crate::vec_iter_to_json::SerializeVecIterWrapper {
     iter: RefCell::new(&mut iter),
   };
   wrap.serialize(serializer)

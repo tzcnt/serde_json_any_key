@@ -2,6 +2,8 @@ use super::*;
 use serde::de::{MapAccess};
 use std::fmt;
 
+// Some utilities required to implement any_key_map / any_key_vec
+
 pub struct MapIter<'de,A,K,V> {
   pub access: A,
   marker: PhantomData<(&'de (),K,V)>,

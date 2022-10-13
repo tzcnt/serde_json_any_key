@@ -47,7 +47,7 @@ V: 'a + Serialize,
   /// try_main().unwrap();
   /// ```
   fn to_json_map(self) -> Result<String, serde_json::Error> {
-    serde_json::to_string(&crate::SerializeVecIterWrapper {
+    serde_json::to_string(&SerializeVecIterWrapper {
       iter: RefCell::new(self.into_iter())
     })
   }
@@ -59,3 +59,41 @@ K: 'a + Serialize + Any,
 V: 'a + Serialize,
 <Self as IntoIterator>::IntoIter: 'a
 { }
+
+pub(crate) struct SerializeVecIterWrapper<'a,K,V,I> where 
+I: Iterator<Item=&'a (K,V)>,
+K: 'a,
+V: 'a,
+{
+  pub iter: RefCell<I>
+}
+
+impl<'a,K,V,I> Serialize for SerializeVecIterWrapper<'a,K,V,I> where
+  I: Iterator<Item=&'a (K,V)>,
+  K: Serialize + Any,
+  V: Serialize,
+{
+  fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where
+    S: Serializer
+  {
+    let mut ser_map = serializer.serialize_map(None)?;
+    let mut iter = self.iter.borrow_mut();
+    // handle strings specially so they don't get escaped and wrapped inside another string
+    // compiler seems to be able to optimize this branch away statically
+    if TypeId::of::<K>() == TypeId::of::<String>() {
+      while let Some((k, v)) = iter.next() {
+        let s = (k as &dyn Any).downcast_ref::<String>().ok_or(S::Error::custom("Failed to serialize String as string"))?;
+        ser_map.serialize_entry(s, &v)?;
+      }
+    } else {
+      while let Some((k, v)) = iter.next() {
+        ser_map.serialize_entry(match &serde_json::to_string(&k)
+        {
+          Ok(key_string) => key_string,
+          Err(e) => { return Err(e).map_err(S::Error::custom); }
+        }, &v)?;
+      }
+    }
+    ser_map.end()
+  }
+}
