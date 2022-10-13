@@ -74,9 +74,9 @@
 //! ```
 
 // modules
-mod json_to_iter;
 mod json_to_map;
 mod json_to_vec;
+mod json_to_iter;
 mod map_iter_to_json;
 mod vec_iter_to_json;
 mod consuming_iter_to_json;
