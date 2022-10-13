@@ -7,13 +7,13 @@ mod tests {
   use serde::{Serialize, Deserialize};
 
   #[derive(Clone, Copy, Deserialize, Serialize, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
-  pub struct Test {
+  struct Test {
     pub a: i32,
     pub b: i32
   }
 
   #[derive(Clone, Deserialize, Serialize, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
-  pub struct TestWithString {
+  struct TestWithString {
     pub a: i32,
     pub b: i32,
     pub c: String
@@ -153,112 +153,6 @@ mod tests {
     let serialized = serde_json::to_string(&outer).unwrap();
     let deser: Outer = serde_json::from_str(&serialized).unwrap();
     assert_eq!(outer, deser);
-  }
-
-  #[test]
-  fn test_struct_serde_with_map() {
-    #[derive(Clone, Deserialize, Serialize, PartialEq, Eq, Debug)]
-    struct SerdeWithMap {
-      #[serde(with = "any_key_map")]
-      pub inner: HashMap<Test,Test>
-    }
-    let mut data = SerdeWithMap {
-      inner: HashMap::new()
-    };
-    data.inner.insert(Test {a: 3, b: 5}, Test {a: 7, b: 9});
-    let serialized = serde_json::to_string(&data).unwrap();
-    assert_eq!(serialized, "{\"inner\":{\"{\\\"a\\\":3,\\\"b\\\":5}\":{\"a\":7,\"b\":9}}}");
-    let deser: SerdeWithMap = serde_json::from_str(&serialized).unwrap();
-    assert_eq!(data, deser);
-  }
-
-  #[test]
-  fn test_struct_serde_with_vec() {
-    #[derive(Clone, Deserialize, Serialize, PartialEq, Eq, Debug)]
-    struct SerdeWithVec {
-      #[serde(with = "any_key_vec")]
-      pub inner: Vec<(Test,Test)>
-    }
-    let mut data = SerdeWithVec {
-      inner: vec![]
-    };
-    data.inner.push((Test {a: 3, b: 5}, Test {a: 7, b: 9}));
-    let serialized = serde_json::to_string(&data).unwrap();
-    assert_eq!(serialized, "{\"inner\":{\"{\\\"a\\\":3,\\\"b\\\":5}\":{\"a\":7,\"b\":9}}}");
-    let deser: SerdeWithVec = serde_json::from_str(&serialized).unwrap();
-    assert_eq!(data, deser);
-  }
-
-  #[test]
-  fn test_string_serde_with_map() {
-    #[derive(Clone, Deserialize, Serialize, PartialEq, Eq, Debug)]
-    struct SerdeWithMap {
-      #[serde(with = "any_key_map")]
-      pub inner: HashMap<String, i32>
-    }
-    let mut data = SerdeWithMap {
-      inner: HashMap::new()
-    };
-    data.inner.insert("foo".to_string(), 5);
-    
-    let serialized = serde_json::to_string(&data).unwrap();
-    assert_eq!(serialized, "{\"inner\":{\"foo\":5}}");
-    let deser: SerdeWithMap = serde_json::from_str(&serialized).unwrap();
-    assert_eq!(data, deser);
-  }
-  
-  #[test]
-  fn test_string_serde_with_vec() {
-    #[derive(Clone, Deserialize, Serialize, PartialEq, Eq, Debug)]
-    struct SerdeWithVec {
-      #[serde(with = "any_key_vec")]
-      pub inner: Vec<(String, i32)>
-    }
-    let mut data = SerdeWithVec {
-      inner: vec![]
-    };
-    data.inner.push(("foo".to_string(), 5));
-    
-    let serialized = serde_json::to_string(&data).unwrap();
-    assert_eq!(serialized, "{\"inner\":{\"foo\":5}}");
-    let deser: SerdeWithVec = serde_json::from_str(&serialized).unwrap();
-    assert_eq!(data, deser);
-  }
-
-  #[test]
-  fn test_int_serde_with_map() {
-    #[derive(Clone, Deserialize, Serialize, PartialEq, Eq, Debug)]
-    struct SerdeWithMap {
-      #[serde(with = "any_key_map")]
-      pub inner: HashMap<i32, Test>
-    }
-    let mut data = SerdeWithMap {
-      inner: HashMap::new()
-    };
-    data.inner.insert(5, Test {a: 6, b: 7});
-    
-    let serialized = serde_json::to_string(&data).unwrap();
-    assert_eq!(serialized, "{\"inner\":{\"5\":{\"a\":6,\"b\":7}}}");
-    let deser: SerdeWithMap = serde_json::from_str(&serialized).unwrap();
-    assert_eq!(data, deser);
-  }
-  
-  #[test]
-  fn test_int_serde_with_vec() {
-    #[derive(Clone, Deserialize, Serialize, PartialEq, Eq, Debug)]
-    struct SerdeWithVec {
-      #[serde(with = "any_key_vec")]
-      pub inner: Vec<(i32, Test)>
-    }
-    let mut data = SerdeWithVec {
-      inner: vec![]
-    };
-    data.inner.push((5, Test {a: 6, b: 7}));
-    
-    let serialized = serde_json::to_string(&data).unwrap();
-    assert_eq!(serialized, "{\"inner\":{\"5\":{\"a\":6,\"b\":7}}}");
-    let deser: SerdeWithVec = serde_json::from_str(&serialized).unwrap();
-    assert_eq!(data, deser);
   }
 
   #[test]
