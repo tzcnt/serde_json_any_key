@@ -1,4 +1,7 @@
-use super::*;
+
+use std::any::{Any, TypeId};
+use std::cell::RefCell;
+use serde::ser::{Serialize, Serializer, SerializeMap, Error};
 
 /// Blanket impl [to_json_map()](trait.MapIterToJson.html#method.to_json_map) for all `IntoIterator<Item=(&K,&V)>` types.
 pub trait MapIterToJson<'a,K,V>: IntoIterator<Item=(&'a K,&'a V)> where

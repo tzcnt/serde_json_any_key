@@ -73,14 +73,6 @@
 //! try_main().unwrap();
 //! ```
 
-// imports
-use std::any::{Any, TypeId};
-use std::cell::RefCell;
-use std::hash::Hash;
-use std::marker::PhantomData;
-use serde::ser::{Serialize, Serializer, SerializeMap, Error};
-use serde::de::{Deserialize, Deserializer, Visitor};
-
 // modules
 mod json_to_iter;
 mod json_to_map;

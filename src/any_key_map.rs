@@ -35,7 +35,11 @@
 /// try_main().unwrap();
 /// ```
 
-use super::*;
+use crate::serde_with_utils;
+use std::any::Any;
+use std::cell::RefCell;
+use serde::ser::{Serialize, Serializer};
+use serde::de::{Deserialize, Deserializer};
 
 /// See docs for [any_key_map](index.html).
 pub fn serialize<'s,S,C,K,V>(coll: C, serializer: S) -> Result<S::Ok,S::Error>
@@ -64,7 +68,7 @@ pub fn deserialize<'d,D,C,K,V>(deserializer: D) -> Result<C, D::Error> where
 
 #[cfg(test)]
 mod tests {
-  use super::*;
+  use crate::any_key_map;
   use std::collections::HashMap;
   use serde::{Serialize, Deserialize};
 

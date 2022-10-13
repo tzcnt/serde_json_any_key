@@ -1,7 +1,6 @@
 
 #[cfg(test)]
 mod tests {
-  use super::*;
   use serde_json_any_key::*;
   use std::collections::HashMap;
   use serde::{Serialize, Deserialize};
