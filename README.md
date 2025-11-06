@@ -79,3 +79,5 @@ fn main() {
  assert_eq!(nested, deser_nested);
 }
 ```
+
+This crate is not abandoned; there just hasn't been any reason to make changes since the initial release. I'm available to fix any issues that arise.
