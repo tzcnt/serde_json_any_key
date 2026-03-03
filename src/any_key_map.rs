@@ -46,7 +46,8 @@ pub fn serialize<'s,S,C,K,V>(coll: C, serializer: S) -> Result<S::Ok,S::Error>
 where S: Serializer,
 C: IntoIterator<Item=(&'s K,&'s V)>,
 K: Serialize + Any + 's,
-V: Serialize + 's
+V: Serialize + 's,
+<C as IntoIterator>::IntoIter: ExactSizeIterator
 {
   let mut iter = coll.into_iter();
   let wrap = crate::map_iter_to_json::SerializeMapIterWrapper {

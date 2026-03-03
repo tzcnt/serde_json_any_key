@@ -8,7 +8,7 @@ pub trait MapIterToJson<'a,K,V>: IntoIterator<Item=(&'a K,&'a V)> where
 Self: Sized,
 K: 'a + Serialize + Any,
 V: 'a + Serialize,
-<Self as IntoIterator>::IntoIter: 'a
+<Self as IntoIterator>::IntoIter: 'a + ExactSizeIterator
 {
   /// Serialize any `IntoIterator<(&K,&V)>` to a JSON map. This includes, but is not limited to, the following example types:  
   /// `HashMap<K,V>`  
@@ -66,11 +66,11 @@ impl<'a,K,V,T> MapIterToJson<'a,K,V> for T where
 T: IntoIterator<Item=(&'a K,&'a V)>,
 K: 'a + Serialize + Any,
 V: 'a + Serialize,
-<Self as IntoIterator>::IntoIter: 'a
+<Self as IntoIterator>::IntoIter: 'a + ExactSizeIterator
 { }
 
 pub(crate) struct SerializeMapIterWrapper<'a,K,V,I> where
-I: Iterator<Item=(&'a K,&'a V)>,
+I: Iterator<Item=(&'a K,&'a V)> + ExactSizeIterator,
 K: 'a,
 V: 'a
 {
@@ -78,15 +78,15 @@ V: 'a
 }
 
 impl<'a,K,V,I> Serialize for SerializeMapIterWrapper<'a,K,V,I> where
-  I: Iterator<Item=(&'a K,&'a V)>,
+  I: Iterator<Item=(&'a K,&'a V)> + ExactSizeIterator,
   K: Serialize + Any,
   V: Serialize,
 {
   fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where
     S: Serializer
   {
-    let mut ser_map = serializer.serialize_map(None)?;
     let mut iter = self.iter.borrow_mut();
+    let mut ser_map = serializer.serialize_map(Some(iter.len()))?;
     // handle strings specially so they don't get escaped and wrapped inside another string
     // compiler seems to be able to optimize this branch away statically
     if TypeId::of::<K>() == TypeId::of::<String>() {
