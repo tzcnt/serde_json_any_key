@@ -8,7 +8,7 @@ pub trait MapIterToJson<'a,K,V>: IntoIterator<Item=(&'a K,&'a V)> where
 Self: Sized,
 K: 'a + Serialize + Any,
 V: 'a + Serialize,
-<Self as IntoIterator>::IntoIter: 'a + ExactSizeIterator
+<Self as IntoIterator>::IntoIter: 'a
 {
   /// Serialize any `IntoIterator<(&K,&V)>` to a JSON map. This includes, but is not limited to, the following example types:  
   /// `HashMap<K,V>`  
@@ -66,11 +66,59 @@ impl<'a,K,V,T> MapIterToJson<'a,K,V> for T where
 T: IntoIterator<Item=(&'a K,&'a V)>,
 K: 'a + Serialize + Any,
 V: 'a + Serialize,
+<Self as IntoIterator>::IntoIter: 'a
+{ }
+
+pub trait MapIterToJsonSized<'a,K,V>: IntoIterator<Item=(&'a K,&'a V)> where
+Self: Sized,
+K: 'a + Serialize + Any,
+V: 'a + Serialize,
+<Self as IntoIterator>::IntoIter: 'a + ExactSizeIterator
+{
+  fn to_json_map_sized(self) -> Result<String, serde_json::Error> {
+    serde_json::to_string(&SerializeMapIterWrapper {
+      iter: RefCell::new(self.into_iter())
+    })
+  }
+}
+
+impl<'a,K,V,T> MapIterToJsonSized<'a,K,V> for T where
+T: IntoIterator<Item=(&'a K,&'a V)>,
+K: 'a + Serialize + Any,
+V: 'a + Serialize,
 <Self as IntoIterator>::IntoIter: 'a + ExactSizeIterator
 { }
 
+fn serialize_iter_to_map<'a,S,K,V,I>(serializer: S, iter: &RefCell<I>, len: Option<usize>) -> Result<S::Ok, S::Error>
+where
+I: Iterator<Item=(&'a K,&'a V)>,
+K: 'a + Serialize + Any,
+V: 'a + Serialize,
+S: Serializer
+{
+  let mut iter = iter.borrow_mut();
+  let mut ser_map = serializer.serialize_map(len)?;
+  // handle strings specially so they don't get escaped and wrapped inside another string
+  // compiler seems to be able to optimize this branch away statically
+  if TypeId::of::<K>() == TypeId::of::<String>() {
+    while let Some((k, v)) = iter.next() {
+      let s = (k as &dyn Any).downcast_ref::<String>().ok_or(S::Error::custom("Failed to serialize String as string"))?;
+      ser_map.serialize_entry(s, &v)?;
+    }
+  } else {
+    while let Some((k, v)) = iter.next() {
+      ser_map.serialize_entry(match &serde_json::to_string(&k)
+      {
+        Ok(key_string) => key_string,
+        Err(e) => { return Err(e).map_err(S::Error::custom); }
+      }, &v)?;
+    }
+  }
+  ser_map.end()
+}
+
 pub(crate) struct SerializeMapIterWrapper<'a,K,V,I> where
-I: Iterator<Item=(&'a K,&'a V)> + ExactSizeIterator,
+I: Iterator<Item=(&'a K,&'a V)>,
 K: 'a,
 V: 'a
 {
@@ -78,6 +126,26 @@ V: 'a
 }
 
 impl<'a,K,V,I> Serialize for SerializeMapIterWrapper<'a,K,V,I> where
+  I: Iterator<Item=(&'a K,&'a V)>,
+  K: Serialize + Any,
+  V: Serialize,
+{
+  fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where
+    S: Serializer
+  {
+    serialize_iter_to_map(serializer, &self.iter, None)
+  }
+}
+
+pub(crate) struct SerializeMapIterWrapperSized<'a,K,V,I> where
+I: Iterator<Item=(&'a K,&'a V)> + ExactSizeIterator,
+K: 'a,
+V: 'a
+{
+  pub iter: RefCell<I>
+}
+
+impl<'a,K,V,I> Serialize for SerializeMapIterWrapperSized<'a,K,V,I> where
   I: Iterator<Item=(&'a K,&'a V)> + ExactSizeIterator,
   K: Serialize + Any,
   V: Serialize,
@@ -85,24 +153,7 @@ impl<'a,K,V,I> Serialize for SerializeMapIterWrapper<'a,K,V,I> where
   fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where
     S: Serializer
   {
-    let mut iter = self.iter.borrow_mut();
-    let mut ser_map = serializer.serialize_map(Some(iter.len()))?;
-    // handle strings specially so they don't get escaped and wrapped inside another string
-    // compiler seems to be able to optimize this branch away statically
-    if TypeId::of::<K>() == TypeId::of::<String>() {
-      while let Some((k, v)) = iter.next() {
-        let s = (k as &dyn Any).downcast_ref::<String>().ok_or(S::Error::custom("Failed to serialize String as string"))?;
-        ser_map.serialize_entry(s, &v)?;
-      }
-    } else {
-      while let Some((k, v)) = iter.next() {
-        ser_map.serialize_entry(match &serde_json::to_string(&k)
-        {
-          Ok(key_string) => key_string,
-          Err(e) => { return Err(e).map_err(S::Error::custom); }
-        }, &v)?;
-      }
-    }
-    ser_map.end()
+    let len = self.iter.borrow().len();
+    serialize_iter_to_map(serializer, &self.iter, Some(len))
   }
 }
