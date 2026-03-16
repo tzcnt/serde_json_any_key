@@ -11,7 +11,7 @@ V: Serialize,
 <Self as IntoIterator>::IntoIter: 'a + ExactSizeIterator
 {
   /// Serialize any `IntoIterator<(K,V)> + ExactSizeIterator` to a JSON map.
-
+  ///
   /// **This consumes self**, and is not compatible with non-consuming iterators, such as those returned by the common
   /// `std::collections::Type::iter()` function. For those non-consuming iterators *with known length*, call [to_json_map_sized()](crate::MapIterToJsonSized::to_json_map_sized) instead.
   /// 
