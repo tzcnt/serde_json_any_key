@@ -1,39 +1,39 @@
-/// Apply the attribute `#[serde(with = "any_key_map")]` to de/serialize structs with nested maps that contain non-string keys.
-/// 
-/// This attribute supports any type that impls `IntoIterator<Item=(&K,&V)>` and `FromIterator<(K,V)>`.
-/// ```
-/// use std::collections::HashMap;
-/// use serde::{Serialize, Deserialize};
-/// use serde_json::Error;
-/// use serde_json_any_key::*;
-/// 
-/// #[derive(Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash, Debug)]
-/// pub struct Test {
-///   pub a: i32,
-///   pub b: i32
-/// }
-/// 
-/// #[derive(Clone, Default, Serialize, Deserialize, PartialEq, Eq, Debug)]
-/// pub struct WithNestedMap {
-///   #[serde(with = "any_key_map")]
-///   pub struct_map: HashMap<Test, Test>,
-///   #[serde(with = "any_key_map")]
-///   pub int_map: HashMap<i32, String>
-/// }
-/// 
-/// fn try_main() -> Result<(), Error> {
-/// let mut data: WithNestedMap = Default::default();
-/// data.struct_map.insert(Test {a: 3, b: 5}, Test {a: 7, b: 9});
-/// data.int_map.insert(5, "foo".to_string());
-/// 
-/// // you can use the usual serde_json functions now
-/// let ser = serde_json::to_string(&data).unwrap();
-/// let deser: WithNestedMap = serde_json::from_str(&ser).unwrap();
-///
-/// assert_eq!(data, deser);
-/// Ok(()) }
-/// try_main().unwrap();
-/// ```
+//! Apply the attribute `#[serde(with = "any_key_map")]` to de/serialize structs with nested maps that contain non-string keys.
+//! 
+//! This attribute supports any type that impls `IntoIterator<Item=(&K,&V)>` and `FromIterator<(K,V)>`.
+//! ```
+//! use std::collections::HashMap;
+//! use serde::{Serialize, Deserialize};
+//! use serde_json::Error;
+//! use serde_json_any_key::*;
+//! 
+//! #[derive(Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash, Debug)]
+//! pub struct Test {
+//!   pub a: i32,
+//!   pub b: i32
+//! }
+//! 
+//! #[derive(Clone, Default, Serialize, Deserialize, PartialEq, Eq, Debug)]
+//! pub struct WithNestedMap {
+//!   #[serde(with = "any_key_map")]
+//!   pub struct_map: HashMap<Test, Test>,
+//!   #[serde(with = "any_key_map")]
+//!   pub int_map: HashMap<i32, String>
+//! }
+//! 
+//! fn try_main() -> Result<(), Error> {
+//! let mut data: WithNestedMap = Default::default();
+//! data.struct_map.insert(Test {a: 3, b: 5}, Test {a: 7, b: 9});
+//! data.int_map.insert(5, "foo".to_string());
+//! 
+//! // you can use the usual serde_json functions now
+//! let ser = serde_json::to_string(&data).unwrap();
+//! let deser: WithNestedMap = serde_json::from_str(&ser).unwrap();
+//!
+//! assert_eq!(data, deser);
+//! Ok(()) }
+//! try_main().unwrap();
+//! ```
 
 use crate::serde_with_utils;
 use std::any::Any;
