@@ -1,9 +1,8 @@
 
+use crate::serde_with_utils::serialize_iter_to_map;
 use std::any::Any;
 use std::cell::RefCell;
 use serde::ser::{Serialize, Serializer};
-
-use crate::serde_with_utils::serialize_iter_to_map;
 
 /// Blanket impl [to_json_map()](trait.MapIterToJson.html#method.to_json_map) for all `IntoIterator<Item=(&K,&V)>` types.
 pub trait MapIterToJson<'a,K,V>: IntoIterator<Item=(&'a K,&'a V)> where

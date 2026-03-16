@@ -1,9 +1,15 @@
+//! The attribute `#[serde(with = "any_key_map_json")]` to de/serialize structs with nested maps *of known length*
+//! that contain non-string keys, i.e., those implementing ExactSizeIterator.
+//! 
+//! For further information see [any_key_map](crate::any_key_map).
+
 use crate::serde_with_utils;
 use std::any::Any;
 use std::cell::RefCell;
 use serde::ser::{Serialize, Serializer};
 use serde::de::{Deserialize, Deserializer};
 
+/// See docs for [any_key_map_sized](`crate::any_key_map_sized`).
 pub fn serialize<'s,S,C,K,V>(coll: C, serializer: S) -> Result<S::Ok,S::Error>
 where S: Serializer,
 C: IntoIterator<Item=(&'s K,&'s V)>,
@@ -18,6 +24,7 @@ V: Serialize + 's,
   wrap.serialize(serializer)
 }
 
+/// See docs for [any_key_map_sized](`crate::any_key_map_sized`).
 pub fn deserialize<'d,D,C,K,V>(deserializer: D) -> Result<C, D::Error> where
   D: Deserializer<'d>,
   C: FromIterator<(K,V)> + Sized,
