@@ -12,7 +12,7 @@ V: Serialize + 's,
 <C as IntoIterator>::IntoIter: ExactSizeIterator
 {
   let mut iter = coll.into_iter();
-  let wrap = crate::map_iter_to_json::SerializeMapIterWrapperSized {
+  let wrap = crate::sized::map_iter_to_json_sized::SerializeMapIterWrapperSized {
     iter: RefCell::new(&mut iter),
   };
   wrap.serialize(serializer)

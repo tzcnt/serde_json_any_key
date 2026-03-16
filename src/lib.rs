@@ -81,15 +81,22 @@ mod map_iter_to_json;
 mod vec_iter_to_json;
 mod consuming_iter_to_json;
 mod serde_with_utils;
+mod sized;
 
 // exports
 pub use json_to_map::json_to_map;
 pub use json_to_vec::json_to_vec;
 pub use json_to_iter::json_to_iter;
-pub use map_iter_to_json::MapIterToJsonSized;
+
 pub use map_iter_to_json::MapIterToJson;
+pub use sized::map_iter_to_json_sized::MapIterToJsonSized;
+
 pub use vec_iter_to_json::VecIterToJson;
+
 pub use consuming_iter_to_json::ConsumingIterToJson;
-pub mod any_key_map_sized;
+pub use sized::consuming_iter_to_json_sized::ConsumingIterToJsonSized;
+
 pub mod any_key_map;
+pub use sized::any_key_map_sized;
+
 pub mod any_key_vec;
