@@ -14,6 +14,9 @@ De/serialization of structs with nested maps is supported via the following attr
 
 All de/serialization is done in a single pass, with no intermediate collection.
 
+Support for sized input iterators is also provided via separate `_sized` overloads.
+This supports binary output serializers.
+
 This crate is implemented purely using safe, stable Rust.
 
 ## Example
@@ -79,5 +82,3 @@ fn main() {
  assert_eq!(nested, deser_nested);
 }
 ```
-
-This crate is not abandoned; there just hasn't been any reason to make changes since the initial release. I'm available to fix any issues that arise.
