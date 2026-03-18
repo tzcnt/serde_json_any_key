@@ -1,4 +1,4 @@
-//! The attribute `#[serde(with = "any_key_map_json")]` to de/serialize structs with nested maps *of known length*
+//! The attribute `#[serde(with = "any_key_map_sized")]` to de/serialize structs with nested maps *of known length*
 //! that contain non-string keys, i.e., those implementing ExactSizeIterator.
 //! 
 //! For further information see [any_key_map](crate::any_key_map).
